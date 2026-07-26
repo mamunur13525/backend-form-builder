@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/ 
+.pnpm/
+.pnpm-store/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Build output
+/dist
+/build
+/out
+coverage/
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Uploads and generated media
+uploads/*
+!uploads/.gitkeep
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test artifacts
+.jest-cache/

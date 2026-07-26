@@ -1,0 +1,34 @@
+import { Router, Router as ExpressRouter } from "express";
+import authRoutes from "../modules/auth/auth.route";
+import userRoutes from "../modules/users/user.route";
+import formRoutes from "../modules/forms/form.route";
+import fieldRoutes from "../modules/fields/field.route";
+import blockRoutes from "../modules/blocks/block.route";
+import logicRoutes from "../modules/logic/logic.route";
+import responseRoutes from "../modules/responses/response.route";
+import publicFormRoutes from "../modules/public-form/public-form.route";
+import analyticsRoutes from "../modules/analytics/analytics.route";
+import dashboardRoutes from "../modules/dashboard/dashboard.route";
+import uploadRoutes from "../modules/uploads/upload.route";
+import notificationRoutes from "../modules/notifications/notification.route";
+import workspaceRoutes from "../modules/workspaces/workspace.route";
+
+const router: ExpressRouter = Router();
+
+const apiPrefix = "/api/v1";
+
+router.use(`${apiPrefix}/auth`, authRoutes);
+router.use(`${apiPrefix}/users`, userRoutes);
+router.use(`${apiPrefix}/forms`, formRoutes);
+router.use(`${apiPrefix}/forms`, fieldRoutes);
+router.use(`${apiPrefix}/forms`, blockRoutes);
+router.use(`${apiPrefix}/forms`, logicRoutes);
+router.use(`${apiPrefix}/forms`, responseRoutes);
+router.use(`${apiPrefix}/public`, publicFormRoutes);
+router.use(`${apiPrefix}/forms`, analyticsRoutes);
+router.use(`${apiPrefix}/dashboard`, dashboardRoutes);
+router.use(`${apiPrefix}/uploads`, uploadRoutes);
+router.use(`${apiPrefix}/notifications`, notificationRoutes);
+router.use(`${apiPrefix}/workspaces`, workspaceRoutes);
+
+export default router;
