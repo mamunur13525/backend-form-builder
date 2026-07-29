@@ -1,7 +1,7 @@
 import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
+import { nanoid } from "nanoid";
 import { Form } from "../../models/Form";
-import { FormField } from "../../models/FormField";
 import { FormResponse } from "../../models/FormResponse";
 import { FormShare } from "../../models/FormShare";
 
@@ -23,10 +23,10 @@ export const getFormSchema = async (slug: string): Promise<any> => {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
   }
 
-  const fields = await FormField.find({ formId: form._id, isActive: true })
-    .sort({ order: 1 })
-    .select("-logic")
-    .lean();
+  const fields = (form.fields || [])
+    .filter((f: any) => f.isActive)
+    .sort((a: any, b: any) => a.order - b.order)
+    .map(({ logic, ...rest }: any) => rest);
 
   return {
     form: {
@@ -57,9 +57,9 @@ export const getFormPreview = async (slug: string): Promise<any> => {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
 
-  const fields = await FormField.find({ formId: form._id, isActive: true })
-    .sort({ order: 1 })
-    .lean();
+  const fields = (form.fields || [])
+    .filter((f: any) => f.isActive)
+    .sort((a: any, b: any) => a.order - b.order);
 
   return { form, fields };
 };
@@ -77,7 +77,7 @@ export const submitForm = async (
   const response = await FormResponse.create({
     formId: form._id,
     answers: data.answers,
-    sessionId: data.sessionId || `session_${Date.now()}`,
+    sessionId: data.sessionId || `session_${nanoid()}`,
     metadata: {
       ipAddress: metadata?.ip || "",
       userAgent: metadata?.userAgent || "",
@@ -104,7 +104,7 @@ export const saveDraft = async (
   const response = await FormResponse.create({
     formId: form._id,
     answers: data.answers,
-    sessionId: data.sessionId || `draft_${Date.now()}`,
+    sessionId: data.sessionId || `draft_${nanoid()}`,
     submittedAt: new Date(),
   });
 

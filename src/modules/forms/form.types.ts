@@ -46,6 +46,7 @@ export interface FormResponse {
     requireLogin: boolean;
     collectIP: boolean;
   };
+  fields: {}[];
   createdBy: string;
   updatedBy?: string;
   createdAt: Date;

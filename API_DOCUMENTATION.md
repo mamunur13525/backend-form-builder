@@ -99,6 +99,37 @@ Login with email and password.
 }
 ```
 
+### POST /auth/google
+Sign up or sign in with Google using a Google ID token.
+
+**Request Body:**
+```json
+{
+  "idToken": "google-id-token-here"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Google signup successful",
+  "data": {
+    "user": {
+      "id": "65f1a2b3c4d5e6f7a8b9c0d1",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "viewer",
+      "avatarUrl": "https://lh3.googleusercontent.com/a-/photo.jpg"
+    },
+    "tokens": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+  }
+}
+```
+
 ### POST /auth/logout
 Logout the current user (client-side token removal).
 
@@ -775,8 +806,12 @@ Update form share settings.
 
 ## Form Fields Endpoints
 
+**Architecture Note:** Form fields are now **embedded subdocuments** inside the Form document. They are NOT stored in a separate collection. All field operations use MongoDB's array update operators (`$push`, `$pull`, positional `$`) directly on the Form document's `fields` array.
+
 ### POST /forms/:formId/fields
 Create a new field in a form.
+
+**How it works:** The field object is pushed into the Form's `fields` array using MongoDB's `$push` operator. The `fieldKey` is auto-generated (e.g., `field_abc12345`), and the `order` is auto-calculated (max existing order + 1).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -808,8 +843,7 @@ Create a new field in a form.
   "success": true,
   "message": "Field created successfully",
   "data": {
-    "id": "65f1a2b3c4d5e6f7a8b9c0d3",
-    "formId": "65f1a2b3c4d5e6f7a8b9c0d2",
+    "_id": "65f1a2b3c4d5e6f7a8b9c0d3",
     "fieldKey": "field_abc123",
     "label": "What is your name?",
     "helperText": "Please enter your full name",
@@ -829,7 +863,9 @@ Create a new field in a form.
 ```
 
 ### GET /forms/:formId/fields
-Get all fields for a form.
+Get all active fields for a form.
+
+**How it works:** Reads the `fields` array from the Form document and filters by `isActive: true`, sorted by `order`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -845,7 +881,9 @@ Get all fields for a form.
 ```
 
 ### GET /forms/:formId/fields/:fieldId
-Get a specific field by ID.
+Get a specific field by ID or fieldKey.
+
+**How it works:** Uses MongoDB's positional projection (`"fields.$": 1`) to return only the matching subdocument from the Form's `fields` array. The `fieldId` can be either the MongoDB `_id` of the embedded field or its `fieldKey` string.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -859,7 +897,9 @@ Get a specific field by ID.
 ```
 
 ### PATCH /forms/:formId/fields/:fieldId
-Update a field.
+Update a field's properties.
+
+**How it works:** Uses MongoDB's positional `$` operator to update specific fields of the matched subdocument (e.g., `{ $set: { "fields.$.label": "New label" } }`).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -885,7 +925,9 @@ Update a field.
 ```
 
 ### DELETE /forms/:formId/fields/:fieldId
-Delete a field.
+Delete a field from a form.
+
+**How it works:** Uses MongoDB's `$pull` operator to remove the matching subdocument from the Form's `fields` array by its `_id`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -900,6 +942,8 @@ Delete a field.
 
 ### PATCH /forms/:formId/fields/reorder
 Reorder fields in a form.
+
+**How it works:** Iterates over the provided `fieldIds` array and updates each field's `order` value using MongoDB's positional `$` operator. The index in the array determines the new order (1-based).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -922,6 +966,8 @@ Reorder fields in a form.
 ### PATCH /forms/:formId/fields/:fieldId/duplicate
 Duplicate a field.
 
+**How it works:** Reads the existing field from the Form's `fields` array, creates a copy with a new `fieldKey`, appends "(copy)" to the label, and pushes it as a new subdocument with `$push`.
+
 **Headers:** `Authorization: Bearer <token>`
 
 **Response (201):**
@@ -935,6 +981,8 @@ Duplicate a field.
 
 ### PATCH /forms/:formId/fields/:fieldId/logic
 Update field logic (conditional logic).
+
+**How it works:** Uses MongoDB's positional `$` operator to update only the `logic` field of the matched subdocument: `{ $set: { "fields.$.logic": [...] } }`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -963,7 +1011,9 @@ Update field logic (conditional logic).
 ```
 
 ### DELETE /forms/:formId/fields/:fieldId/logic
-Delete field logic.
+Delete field logic (set to empty array).
+
+**How it works:** Uses MongoDB's positional `$` operator to set the `logic` field to an empty array: `{ $set: { "fields.$.logic": [] } }`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -2134,7 +2184,9 @@ interface User {
   id: string;
   name: string;
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
+  googleId?: string;
+  provider: "email" | "google";
   avatarUrl: string;
   role: "admin" | "editor" | "viewer";
   isActive: boolean;
@@ -2164,6 +2216,7 @@ interface Form {
     requireLogin: boolean;
     collectIP: boolean;
   };
+  fields: FormField[];
   createdBy: string;
   updatedBy?: string;
   createdAt: Date;
@@ -2171,11 +2224,12 @@ interface Form {
 }
 ```
 
-### FormField
+**Note:** FormFields are now embedded subdocuments within the Form document. They are not stored as a separate collection.
+
+### FormField (embedded in Form)
 ```typescript
 interface FormField {
-  id: string;
-  formId: string;
+  _id: string;
   fieldKey: string;
   label: string;
   helperText: string;

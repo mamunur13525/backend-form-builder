@@ -118,30 +118,80 @@ describe("Typeform API Endpoints", () => {
   });
 
   describe("Fields Endpoints", () => {
-    it("should create a field", async () => {
+    let firstFieldId: string;
+    let secondFieldId: string;
+
+    it("should create first field", async () => {
       const res = await api.post(`/api/v1/forms/${formId}/fields`).set("Authorization", `Bearer ${authToken}`).send({
         type: "shortText",
-        label: "Name",
+        label: "First Field",
         required: true,
       });
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      fieldId = res.body.data.id;
+      expect(res.body.data.order).toBe(1);
+      firstFieldId = res.body.data.id;
     });
 
-    it("should get all fields", async () => {
+    it("should create second field", async () => {
+      const res = await api.post(`/api/v1/forms/${formId}/fields`).set("Authorization", `Bearer ${authToken}`).send({
+        type: "email",
+        label: "Second Field",
+        required: false,
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.order).toBe(2);
+      secondFieldId = res.body.data.id;
+    });
+
+    it("should update field without changing order", async () => {
+      const res = await api.patch(`/api/v1/forms/${formId}/fields/${firstFieldId}`).set("Authorization", `Bearer ${authToken}`).send({
+        label: "Updated First Field",
+        required: false,
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.label).toBe("Updated First Field");
+      expect(res.body.data.order).toBe(1); // Order should remain the same
+    });
+
+    it("should get all fields in correct order", async () => {
       const res = await api.get(`/api/v1/forms/${formId}/fields`).set("Authorization", `Bearer ${authToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data).toHaveLength(2);
+      expect(res.body.data[0].id).toBe(firstFieldId);
+      expect(res.body.data[0].order).toBe(1);
+      expect(res.body.data[1].id).toBe(secondFieldId);
+      expect(res.body.data[1].order).toBe(2);
     });
 
     it("should reorder fields", async () => {
       const res = await api.patch(`/api/v1/forms/${formId}/fields/reorder`).set("Authorization", `Bearer ${authToken}`).send({
-        fieldIds: [fieldId],
+        fieldIds: [secondFieldId, firstFieldId],
       });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+
+    it("should maintain order after reorder", async () => {
+      const res = await api.get(`/api/v1/forms/${formId}/fields`).set("Authorization", `Bearer ${authToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.data[0].id).toBe(secondFieldId);
+      expect(res.body.data[0].order).toBe(1);
+      expect(res.body.data[1].id).toBe(firstFieldId);
+      expect(res.body.data[1].order).toBe(2);
+    });
+
+    it("should fail when creating field with order field in body", async () => {
+      const res = await api.post(`/api/v1/forms/${formId}/fields`).set("Authorization", `Bearer ${authToken}`).send({
+        type: "shortText",
+        label: "Field with order",
+        order: 5, // This should be rejected
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
     });
   });
 

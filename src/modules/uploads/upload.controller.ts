@@ -5,7 +5,7 @@ import { httpStatus } from "../../constants/httpStatus";
 import { ApiError } from "../../utils/ApiError";
 import path from "path";
 import fs from "fs";
-import { v4 as uuidv4 } from "uuid";
+import { nanoid } from "nanoid";
 import { env } from "../../config/env";
 
 // Ensure upload directory exists
@@ -20,7 +20,7 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const file = req.file;
-  const fileId = uuidv4();
+  const fileId = nanoid();
   const ext = path.extname(file.originalname);
   const filename = `${fileId}${ext}`;
   const filePath = path.join(uploadDir, filename);

@@ -13,6 +13,7 @@ export const createForm = asyncHandler(async (req: Request, res: Response) => {
 export const getAllForms = asyncHandler(async (req: Request, res: Response) => {
   const { skip, limit, sort } = getPaginationParams(req.query as any);
   const result = await formService.getAllForms(req.user!.userId, skip, limit, sort);
+  console.log({result})
   sendSuccess(res, result.forms, "Forms retrieved successfully", httpStatus.OK);
 });
 

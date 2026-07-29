@@ -19,6 +19,7 @@ const toFormResponse = (form: any): FormResponse => ({
   slug: form.slug,
   status: form.status,
   theme: form.theme,
+  fields: form.fields,
   settings: form.settings,
   createdBy: form.createdBy?._id?.toString() || form.createdBy?.toString(),
   updatedBy: form.updatedBy?.toString(),
@@ -28,7 +29,7 @@ const toFormResponse = (form: any): FormResponse => ({
 
 export const createForm = async (
   userId: string,
-  data: CreateFormBody
+  data: CreateFormBody,
 ): Promise<FormResponse> => {
   const slug = await generateUniqueSlug(data.title, formRepo.checkSlugExists);
   const form = await formRepo.createForm({
@@ -45,14 +46,13 @@ export const getAllForms = async (
   skip: number,
   limit: number,
   sort: Record<string, 1 | -1>,
-  filter: Record<string, any> = {}
+  filter: Record<string, any> = {},
 ) => {
   const query = { ...filter, createdBy: userId };
   const [forms, total] = await Promise.all([
     formRepo.findAllForms(skip, limit, sort, query),
     formRepo.countForms(query),
   ]);
-
   return {
     forms: forms.map(toFormResponse),
     meta: getPaginationMeta(total, Math.floor(skip / limit) + 1, limit),
@@ -69,7 +69,7 @@ export const getFormById = async (formId: string): Promise<FormResponse> => {
 
 export const updateForm = async (
   formId: string,
-  data: UpdateFormBody
+  data: UpdateFormBody,
 ): Promise<FormResponse> => {
   const form = await formRepo.updateForm(formId, data);
   if (!form) {
@@ -87,7 +87,7 @@ export const deleteForm = async (formId: string): Promise<void> => {
 
 export const duplicateForm = async (
   userId: string,
-  formId: string
+  formId: string,
 ): Promise<FormResponse> => {
   const original = await formRepo.findFormById(formId);
   if (!original) {
@@ -96,7 +96,7 @@ export const duplicateForm = async (
 
   const slug = await generateUniqueSlug(
     `${original.title} (copy)`,
-    formRepo.checkSlugExists
+    formRepo.checkSlugExists,
   );
 
   const form = await formRepo.createForm({
@@ -140,7 +140,9 @@ export const unpublishForm = async (formId: string): Promise<FormResponse> => {
   return toFormResponse(form);
 };
 
-export const getFormSlug = async (formId: string): Promise<{ slug: string }> => {
+export const getFormSlug = async (
+  formId: string,
+): Promise<{ slug: string }> => {
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
@@ -150,7 +152,7 @@ export const getFormSlug = async (formId: string): Promise<{ slug: string }> => 
 
 export const updateFormSettings = async (
   formId: string,
-  data: UpdateFormSettingsBody
+  data: UpdateFormSettingsBody,
 ): Promise<FormResponse> => {
   const form = await formRepo.findFormById(formId);
   if (!form) {
@@ -165,7 +167,7 @@ export const updateFormSettings = async (
 
 export const updateFormTheme = async (
   formId: string,
-  data: UpdateFormThemeBody
+  data: UpdateFormThemeBody,
 ): Promise<FormResponse> => {
   const form = await formRepo.findFormById(formId);
   if (!form) {
@@ -180,7 +182,7 @@ export const updateFormTheme = async (
 
 export const updateFormShare = async (
   formId: string,
-  data: UpdateFormShareBody
+  data: UpdateFormShareBody,
 ): Promise<any> => {
   const form = await formRepo.findFormById(formId);
   if (!form) {

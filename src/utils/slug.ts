@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 export const generateSlug = (title: string): string => {
   return title
     .toLowerCase()
@@ -6,7 +8,7 @@ export const generateSlug = (title: string): string => {
     .replace(/[\s_]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "")
-    || `form-${Date.now()}`;
+    || `form-${nanoid(12)}`;
 };
 
 export const generateUniqueSlug = async (

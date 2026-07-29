@@ -3,10 +3,10 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { sendSuccess } from "../../utils/ApiResponse";
 import { httpStatus } from "../../constants/httpStatus";
 import { ApiError } from "../../utils/ApiError";
+import { nanoid } from "nanoid";
 
 // In-memory store for notifications (replace with DB model in production)
 let notifications: any[] = [];
-let nextId = 1;
 
 export const getNotifications = asyncHandler(async (req: Request, res: Response) => {
   const userNotifications = notifications.filter(
@@ -17,7 +17,7 @@ export const getNotifications = asyncHandler(async (req: Request, res: Response)
 
 export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
   const notification = notifications.find(
-    (n) => n.id === parseInt(req.params.id as string) && n.userId === req.user!.userId
+    (n) => n.id === req.params.id && n.userId === req.user!.userId
   );
   if (!notification) {
     throw new ApiError(httpStatus.NOT_FOUND, "Notification not found");
@@ -35,7 +35,7 @@ export const markAllAsRead = asyncHandler(async (req: Request, res: Response) =>
 
 export const deleteNotification = asyncHandler(async (req: Request, res: Response) => {
   const index = notifications.findIndex(
-    (n) => n.id === parseInt(req.params.id as string) && n.userId === req.user!.userId
+    (n) => n.id === req.params.id && n.userId === req.user!.userId
   );
   if (index === -1) {
     throw new ApiError(httpStatus.NOT_FOUND, "Notification not found");

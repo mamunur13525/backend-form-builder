@@ -35,7 +35,7 @@ export const createFieldSchema = {
         icon: z.string().optional(),
       })
       .optional(),
-  }),
+  }).strict(), // Prevent additional fields like 'order' from being passed
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),
   }),

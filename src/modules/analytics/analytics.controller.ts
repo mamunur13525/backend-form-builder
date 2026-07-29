@@ -3,7 +3,6 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { sendSuccess } from "../../utils/ApiResponse";
 import { Form } from "../../models/Form";
 import { FormResponse } from "../../models/FormResponse";
-import { FormField } from "../../models/FormField";
 
 export const getAnalytics = asyncHandler(async (req: Request, res: Response) => {
   const formId = req.params.formId as string;
@@ -26,19 +25,21 @@ export const getAnalytics = asyncHandler(async (req: Request, res: Response) => 
 export const getAnalyticsOverview = asyncHandler(async (req: Request, res: Response) => {
   const formId = req.params.formId as string;
 
-  const [totalResponses, todayResponses, fields] = await Promise.all([
+  const [totalResponses, todayResponses, form] = await Promise.all([
     FormResponse.countDocuments({ formId }),
     FormResponse.countDocuments({
       formId,
       submittedAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
     }),
-    FormField.find({ formId }).countDocuments(),
+    Form.findById(formId).select("fields").lean(),
   ]);
+
+  const totalFields = form?.fields?.length || 0;
 
   sendSuccess(res, {
     totalResponses,
     todayResponses,
-    totalFields: fields,
+    totalFields,
     averageResponsesPerDay: totalResponses > 0 ? (totalResponses / 30).toFixed(1) : "0",
   });
 });
@@ -74,11 +75,13 @@ export const getAnalyticsConversion = asyncHandler(async (req: Request, res: Res
 
 export const getAnalyticsDropoff = asyncHandler(async (req: Request, res: Response) => {
   const formId = req.params.formId as string;
-  const fields = await FormField.find({ formId }).sort({ order: 1 }).lean();
+  const form = await Form.findById(formId).select("fields").lean();
   const responses = await FormResponse.find({ formId }).lean();
 
+  const fields = (form?.fields || []).sort((a: any, b: any) => a.order - b.order);
+
   // Calculate dropoff per field
-  const dropoffData = fields.map((field, index) => {
+  const dropoffData = fields.map((field: any) => {
     const responsesWithField = responses.filter((r) =>
       r.answers.some((a) => a.fieldKey === field.fieldKey)
     );
@@ -99,11 +102,16 @@ export const getAnalyticsDropoff = asyncHandler(async (req: Request, res: Respon
 
 export const getAnalyticsField = asyncHandler(async (req: Request, res: Response) => {
   const { formId, fieldId } = req.params;
-  const field = await FormField.findById(fieldId).lean();
-  if (!field) {
+  const form = await Form.findOne(
+    { _id: formId, "fields._id": fieldId },
+    { "fields.$": 1 }
+  ).lean();
+
+  if (!form || !form.fields || form.fields.length === 0) {
     return sendSuccess(res, null, "Field not found");
   }
 
+  const field = form.fields[0];
   const responses = await FormResponse.find({ formId }).lean();
   const fieldAnswers = responses
     .filter((r) => r.answers.some((a) => a.fieldKey === field.fieldKey))

@@ -47,7 +47,9 @@ export const register = async (data: RegisterBody): Promise<AuthResponse> => {
 };
 
 export const login = async (data: LoginBody): Promise<AuthResponse> => {
+  console.log({ data });
   const user = await authRepo.findUserByEmail(data.email);
+  console.log({ user });
   if (!user) {
     throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid email or password");
   }
@@ -56,9 +58,16 @@ export const login = async (data: LoginBody): Promise<AuthResponse> => {
     throw new ApiError(httpStatus.FORBIDDEN, "Account is deactivated");
   }
 
+  if (!user.passwordHash) {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      "This account uses Google sign-in. Please sign in with Google.",
+    );
+  }
+
   const isPasswordValid = await authUtils.comparePassword(
     data.password,
-    user.passwordHash
+    user.passwordHash,
   );
   if (!isPasswordValid) {
     throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid email or password");
@@ -88,14 +97,13 @@ export const login = async (data: LoginBody): Promise<AuthResponse> => {
   };
 };
 
-export const googleSignup = async (data: GoogleSignupBody): Promise<AuthResponse> => {
+export const googleSignup = async (
+  data: GoogleSignupBody,
+): Promise<AuthResponse> => {
   const googleUser = await authUtils.verifyGoogleToken(data.idToken);
 
   if (!googleUser.email_verified) {
-    throw new ApiError(
-      httpStatus.UNAUTHORIZED,
-      "Google email is not verified"
-    );
+    throw new ApiError(httpStatus.UNAUTHORIZED, "Google email is not verified");
   }
 
   // Check if a user with this Google ID already exists
@@ -113,12 +121,12 @@ export const googleSignup = async (data: GoogleSignupBody): Promise<AuthResponse
       user = await authRepo.updateGoogleId(
         existingUser._id.toString(),
         googleUser.sub,
-        googleUser.picture || existingUser.avatarUrl
+        googleUser.picture || existingUser.avatarUrl,
       );
       if (!user) {
         throw new ApiError(
           httpStatus.INTERNAL_SERVER_ERROR,
-          "Failed to link Google account"
+          "Failed to link Google account",
         );
       }
       await authRepo.updateLastLogin(user._id.toString());
@@ -138,7 +146,7 @@ export const googleSignup = async (data: GoogleSignupBody): Promise<AuthResponse
   if (!user) {
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to create or retrieve user"
+      "Failed to create or retrieve user",
     );
   }
 
@@ -164,9 +172,7 @@ export const googleSignup = async (data: GoogleSignupBody): Promise<AuthResponse
   };
 };
 
-export const refreshToken = async (
-  token: string
-): Promise<AuthTokens> => {
+export const refreshToken = async (token: string): Promise<AuthTokens> => {
   try {
     const decoded = authUtils.verifyRefreshToken(token);
     const user = await authRepo.findUserById(decoded.userId);
@@ -187,7 +193,10 @@ export const refreshToken = async (
     };
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      "Invalid or expired refresh token",
+    );
   }
 };
 
@@ -212,19 +221,29 @@ export const getProfile = async (userId: string) => {
 export const changePassword = async (
   userId: string,
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<void> => {
   const user = await authRepo.findUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, "User not found");
   }
 
+  if (!user.passwordHash) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Cannot change password. This account uses Google sign-in.",
+    );
+  }
+
   const isPasswordValid = await authUtils.comparePassword(
     currentPassword,
-    user.passwordHash
+    user.passwordHash,
   );
   if (!isPasswordValid) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Current password is incorrect");
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      "Current password is incorrect",
+    );
   }
 
   const passwordHash = await authUtils.hashPassword(newPassword);
@@ -246,13 +265,13 @@ export const forgotPassword = async (email: string): Promise<void> => {
 
 export const resetPassword = async (
   token: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<void> => {
   // TODO: Verify reset token from DB
   // This is a placeholder - implement with proper token storage
   throw new ApiError(
     httpStatus.NOT_IMPLEMENTED,
-    "Password reset not fully implemented yet"
+    "Password reset not fully implemented yet",
   );
 };
 
@@ -261,6 +280,6 @@ export const verifyEmail = async (token: string): Promise<void> => {
   // This is a placeholder - implement with proper token storage
   throw new ApiError(
     httpStatus.NOT_IMPLEMENTED,
-    "Email verification not fully implemented yet"
+    "Email verification not fully implemented yet",
   );
 };

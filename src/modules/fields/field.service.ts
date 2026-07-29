@@ -1,6 +1,6 @@
 import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
-import { v4 as uuidv4 } from "uuid";
+import { nanoid } from "nanoid";
 import * as fieldRepo from "./field.repository";
 import {
   CreateFieldBody,
@@ -14,7 +14,7 @@ export const createField = async (
   data: CreateFieldBody
 ): Promise<any> => {
   const order = (await fieldRepo.getMaxOrder(formId)) + 1;
-  const fieldKey = `field_${uuidv4().slice(0, 8)}`;
+  const fieldKey = `field_${nanoid(8)}`;
 
   const field = await fieldRepo.createField({
     formId,
@@ -30,7 +30,7 @@ export const createField = async (
     appearance: data.appearance || { width: "full", icon: "" },
   });
 
-  return field.toObject();
+  return field;
 };
 
 export const getFieldsByFormId = async (formId: string): Promise<any[]> => {
@@ -45,7 +45,7 @@ export const getFieldById = async (
   if (!field) {
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
-  return field.toObject();
+  return field;
 };
 
 export const updateField = async (
@@ -58,8 +58,8 @@ export const updateField = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
 
-  const updated = await fieldRepo.updateField(fieldId, data);
-  return updated!.toObject();
+  const updated = await fieldRepo.updateField(formId, fieldId, data);
+  return updated;
 };
 
 export const deleteField = async (
@@ -70,7 +70,7 @@ export const deleteField = async (
   if (!field) {
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
-  await fieldRepo.deleteField(fieldId);
+  await fieldRepo.deleteField(formId, fieldId);
 };
 
 export const reorderFields = async (
@@ -95,7 +95,7 @@ export const duplicateField = async (
   }
 
   const order = (await fieldRepo.getMaxOrder(formId)) + 1;
-  const fieldKey = `field_${uuidv4().slice(0, 8)}`;
+  const fieldKey = `field_${nanoid(8)}`;
 
   const newField = await fieldRepo.createField({
     formId,
@@ -111,7 +111,7 @@ export const duplicateField = async (
     appearance: field.appearance,
   });
 
-  return newField.toObject();
+  return newField;
 };
 
 export const updateFieldLogic = async (
@@ -124,8 +124,8 @@ export const updateFieldLogic = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
 
-  const updated = await fieldRepo.updateField(fieldId, { logic: data.logic });
-  return updated!.toObject();
+  const updated = await fieldRepo.updateField(formId, fieldId, { logic: data.logic });
+  return updated;
 };
 
 export const deleteFieldLogic = async (
@@ -137,6 +137,6 @@ export const deleteFieldLogic = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
 
-  const updated = await fieldRepo.updateField(fieldId, { logic: [] });
-  return updated!.toObject();
+  const updated = await fieldRepo.updateField(formId, fieldId, { logic: [] });
+  return updated;
 };

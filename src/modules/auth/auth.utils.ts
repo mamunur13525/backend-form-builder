@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { OAuth2Client } from "google-auth-library";
 import { env } from "../../config/env";
-import { v4 as uuidv4 } from "uuid";
+import { nanoid } from "nanoid";
 
 export const hashPassword = async (password: string): Promise<string> => {
   return bcrypt.hash(password, env.bcryptSaltRounds);
@@ -38,11 +38,11 @@ export const verifyRefreshToken = (token: string): any => {
 };
 
 export const generateResetToken = (): string => {
-  return uuidv4();
+  return nanoid();
 };
 
 export const generateVerificationToken = (): string => {
-  return uuidv4();
+  return nanoid();
 };
 
 export const generateTokenExpiry = (hours = 1): Date => {
