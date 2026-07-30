@@ -155,6 +155,17 @@ describe("Typeform API Endpoints", () => {
       expect(res.body.data.order).toBe(1); // Order should remain the same
     });
 
+    it("should allow empty label and helperText on field update", async () => {
+      const res = await api.patch(`/api/v1/forms/${formId}/fields/${firstFieldId}`).set("Authorization", `Bearer ${authToken}`).send({
+        label: "",
+        helperText: "",
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.label).toBe("");
+      expect(res.body.data.helperText).toBe("");
+    });
+
     it("should get all fields in correct order", async () => {
       const res = await api.get(`/api/v1/forms/${formId}/fields`).set("Authorization", `Bearer ${authToken}`);
       expect(res.status).toBe(200);

@@ -52,7 +52,7 @@ export const updateFieldSchema = {
         "multiSelect", "file", "rating", "yesNo", "url",
       ])
       .optional(),
-    label: z.string().min(1).max(500).optional(),
+    label: z.string().max(500).optional(),
     helperText: z.string().max(500).optional(),
     placeholder: z.string().max(200).optional(),
     required: z.boolean().optional(),
