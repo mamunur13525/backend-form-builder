@@ -24,7 +24,10 @@ router.patch("/:formId/duplicate", validate(formIdParamSchema), formController.d
 router.patch("/:formId/archive", validate(formIdParamSchema), formController.archiveForm);
 router.patch("/:formId/restore", validate(formIdParamSchema), formController.restoreForm);
 router.patch("/:formId/publish", validate(formIdParamSchema), formController.publishForm);
+router.post("/:formId/publish", validate(formIdParamSchema), formController.publishForm);
 router.patch("/:formId/unpublish", validate(formIdParamSchema), formController.unpublishForm);
+router.post("/:formId/discard", validate(formIdParamSchema), formController.discardDraft);
+router.get("/:formId/versions", validate(formIdParamSchema), formController.getFormVersions);
 router.get("/:formId/slug", validate(formIdParamSchema), formController.getFormSlug);
 router.patch("/:formId/settings", validate(updateFormSettingsSchema), formController.updateFormSettings);
 router.patch("/:formId/theme", validate(updateFormThemeSchema), formController.updateFormTheme);

@@ -5,8 +5,8 @@ import { httpStatus } from "../../constants/httpStatus";
 import * as fieldService from "./field.service";
 
 export const createField = asyncHandler(async (req: Request, res: Response) => {
-  const field = await fieldService.createField(req.params.formId as string, req.body);
-  sendSuccess(res, field, "Field created successfully", httpStatus.CREATED);
+  const result = await fieldService.createField(req.params.formId as string, req.body);
+  sendSuccess(res, result, "Field created successfully", httpStatus.CREATED);
 });
 
 export const getFields = asyncHandler(async (req: Request, res: Response) => {
@@ -20,31 +20,31 @@ export const getFieldById = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const updateField = asyncHandler(async (req: Request, res: Response) => {
-  const field = await fieldService.updateField(req.params.formId as string, req.params.fieldId as string, req.body);
-  sendSuccess(res, field, "Field updated successfully");
+  const result = await fieldService.updateField(req.params.formId as string, req.params.fieldId as string, req.body);
+  sendSuccess(res, result, "Field updated successfully");
 });
 
 export const deleteField = asyncHandler(async (req: Request, res: Response) => {
-  await fieldService.deleteField(req.params.formId as string, req.params.fieldId as string);
-  sendSuccess(res, null, "Field deleted successfully");
+  const result = await fieldService.deleteField(req.params.formId as string, req.params.fieldId as string);
+  sendSuccess(res, result, "Field deleted successfully");
 });
 
 export const reorderFields = asyncHandler(async (req: Request, res: Response) => {
-  await fieldService.reorderFields(req.params.formId as string, req.body);
-  sendSuccess(res, null, "Fields reordered successfully");
+  const result = await fieldService.reorderFields(req.params.formId as string, req.body);
+  sendSuccess(res, result, "Fields reordered successfully");
 });
 
 export const duplicateField = asyncHandler(async (req: Request, res: Response) => {
-  const field = await fieldService.duplicateField(req.params.formId as string, req.params.fieldId as string);
-  sendSuccess(res, field, "Field duplicated successfully", httpStatus.CREATED);
+  const result = await fieldService.duplicateField(req.params.formId as string, req.params.fieldId as string);
+  sendSuccess(res, result, "Field duplicated successfully", httpStatus.CREATED);
 });
 
 export const updateFieldLogic = asyncHandler(async (req: Request, res: Response) => {
-  const field = await fieldService.updateFieldLogic(req.params.formId as string, req.params.fieldId as string, req.body);
-  sendSuccess(res, field, "Field logic updated successfully");
+  const result = await fieldService.updateFieldLogic(req.params.formId as string, req.params.fieldId as string, req.body);
+  sendSuccess(res, result, "Field logic updated successfully");
 });
 
 export const deleteFieldLogic = asyncHandler(async (req: Request, res: Response) => {
-  const field = await fieldService.deleteFieldLogic(req.params.formId as string, req.params.fieldId as string);
-  sendSuccess(res, field, "Field logic deleted successfully");
+  const result = await fieldService.deleteFieldLogic(req.params.formId as string, req.params.fieldId as string);
+  sendSuccess(res, result, "Field logic deleted successfully");
 });

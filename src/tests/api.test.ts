@@ -1,9 +1,9 @@
 /// <reference types="jest" />
-import supertest from "supertest";
+import request from "supertest";
 import mongoose from "mongoose";
 import app from "../app";
 
-const api = supertest(app);
+const api = request(app);
 
 describe("Typeform API Endpoints", () => {
   let authToken: string;

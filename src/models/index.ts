@@ -9,3 +9,6 @@ export type { IFormResponse } from "./FormResponse";
 
 export { FormShare } from "./FormShare";
 export type { IFormShare } from "./FormShare";
+
+export { FormVersion } from "./FormVersion";
+export type { IFormVersion, IFormVersionSchema } from "./FormVersion";

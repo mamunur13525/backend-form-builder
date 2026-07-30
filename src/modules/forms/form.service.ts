@@ -3,6 +3,9 @@ import { httpStatus } from "../../constants/httpStatus";
 import { generateUniqueSlug } from "../../utils/slug";
 import { getPaginationMeta } from "../../utils/pagination";
 import * as formRepo from "./form.repository";
+import { FormVersion } from "../../models/FormVersion";
+import { Form } from "../../models/Form";
+import { createInitialVersion, ensureDraftVersion } from "./version.helper";
 import {
   CreateFormBody,
   UpdateFormBody,
@@ -12,19 +15,44 @@ import {
   FormResponse,
 } from "./form.types";
 
-const toFormResponse = (form: any): FormResponse => ({
-  id: form._id.toString(),
-  title: form.title,
-  slug: form.slug,
-  status: form.status,
-  theme: form.theme,
-  fields: form.fields,
-  settings: form.settings,
-  createdBy: form.createdBy?._id?.toString() || form.createdBy?.toString(),
-  updatedBy: form.updatedBy?.toString(),
-  createdAt: form.createdAt,
-  updatedAt: form.updatedAt,
-});
+const toFormResponse = async (form: any): Promise<FormResponse> => {
+  let draftVersion: any = null;
+  if (form.draftVersionId) {
+    draftVersion = await FormVersion.findById(form.draftVersionId).lean();
+  }
+
+  const theme = draftVersion?.formSchema?.theme || form.theme || {
+    primaryColor: "#000000",
+    backgroundColor: "#ffffff",
+    textColor: "#111111",
+  };
+  const fields = draftVersion?.formSchema?.fields || form.fields || [];
+  const settings = draftVersion?.formSchema?.settings || form.settings || {
+    oneQuestionAtATime: true,
+    showProgressBar: true,
+    allowMultipleSubmissions: true,
+    requireLogin: false,
+    collectIP: false,
+  };
+
+  return {
+    id: form._id.toString(),
+    title: form.title,
+    slug: form.slug,
+    status: form.status,
+    draftVersionId: form.draftVersionId?.toString(),
+    publishedVersionId: form.publishedVersionId?.toString() || null,
+    hasUnpublishedChanges: !!form.hasUnpublishedChanges,
+    version: draftVersion?.version || 1,
+    theme,
+    fields,
+    settings,
+    createdBy: form.createdBy?._id?.toString() || form.createdBy?.toString(),
+    updatedBy: form.updatedBy?.toString(),
+    createdAt: form.createdAt,
+    updatedAt: form.updatedAt,
+  };
+};
 
 export const createForm = async (
   userId: string,
@@ -36,6 +64,14 @@ export const createForm = async (
     slug,
     createdBy: userId,
   });
+
+  const v1 = await createInitialVersion(form._id, userId);
+  form.draftVersionId = v1._id as any;
+  form.publishedVersionId = null;
+  form.hasUnpublishedChanges = false;
+  form.status = "draft";
+  await form.save();
+
   return toFormResponse(form);
 };
 
@@ -51,8 +87,9 @@ export const getAllForms = async (
     formRepo.findAllForms(skip, limit, sort, query),
     formRepo.countForms(query),
   ]);
+  const formResponses = await Promise.all(forms.map(toFormResponse));
   return {
-    forms: forms.map(toFormResponse),
+    forms: formResponses,
     meta: getPaginationMeta(total, Math.floor(skip / limit) + 1, limit),
   };
 };
@@ -69,10 +106,22 @@ export const updateForm = async (
   formId: string,
   data: UpdateFormBody,
 ): Promise<FormResponse> => {
-  const form = await formRepo.updateForm(formId, data);
+  const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
+
+  await ensureDraftVersion(form);
+
+  if (data.title !== undefined) {
+    form.title = data.title;
+  }
+
+  if (form.publishedVersionId) {
+    form.hasUnpublishedChanges = true;
+  }
+  await form.save();
+
   return toFormResponse(form);
 };
 
@@ -81,6 +130,7 @@ export const deleteForm = async (formId: string): Promise<void> => {
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
+  await FormVersion.deleteMany({ formId });
 };
 
 export const duplicateForm = async (
@@ -92,17 +142,32 @@ export const duplicateForm = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
 
+  const origVersion = await ensureDraftVersion(original, userId);
+
   const slug = await generateUniqueSlug(
     `${original.title} (copy)`,
     formRepo.checkSlugExists,
   );
 
-  const form = await formRepo.createForm({
+  const newForm = await formRepo.createForm({
     title: `${original.title} (copy)`,
     slug,
     createdBy: userId,
   });
-  return toFormResponse(form);
+
+  const v1 = await createInitialVersion(newForm._id, userId, {
+    fields: JSON.parse(JSON.stringify(origVersion.formSchema.fields || [])),
+    settings: JSON.parse(JSON.stringify(origVersion.formSchema.settings || {})),
+    theme: JSON.parse(JSON.stringify(origVersion.formSchema.theme || {})),
+  });
+
+  newForm.draftVersionId = v1._id as any;
+  newForm.publishedVersionId = null;
+  newForm.hasUnpublishedChanges = false;
+  newForm.status = "draft";
+  await newForm.save();
+
+  return toFormResponse(newForm);
 };
 
 export const archiveForm = async (formId: string): Promise<FormResponse> => {
@@ -122,10 +187,23 @@ export const restoreForm = async (formId: string): Promise<FormResponse> => {
 };
 
 export const publishForm = async (formId: string): Promise<FormResponse> => {
-  const form = await formRepo.updateForm(formId, { status: "published" });
+  const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
+
+  const draftVersion = await ensureDraftVersion(form);
+
+  form.publishedVersionId = draftVersion._id as any;
+  form.status = "published";
+  form.hasUnpublishedChanges = false;
+
+  // Sync schema to Form document for backwards compatibility
+  form.fields = draftVersion.formSchema.fields as any;
+  form.settings = draftVersion.formSchema.settings as any;
+  form.theme = draftVersion.formSchema.theme as any;
+
+  await form.save();
   return toFormResponse(form);
 };
 
@@ -137,14 +215,60 @@ export const unpublishForm = async (formId: string): Promise<FormResponse> => {
   return toFormResponse(form);
 };
 
-export const getFormSlug = async (
-  formId: string,
-): Promise<{ slug: string }> => {
+export const discardDraft = async (formId: string): Promise<FormResponse> => {
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
-  return { slug: form.slug };
+
+  if (
+    form.hasUnpublishedChanges &&
+    form.publishedVersionId &&
+    form.draftVersionId &&
+    form.draftVersionId.toString() !== form.publishedVersionId.toString()
+  ) {
+    await FormVersion.findByIdAndDelete(form.draftVersionId);
+    form.draftVersionId = form.publishedVersionId;
+    form.hasUnpublishedChanges = false;
+    await form.save();
+  }
+
+  return toFormResponse(form);
+};
+
+export const getFormVersions = async (formId: string): Promise<any[]> => {
+  const form = await formRepo.findFormById(formId);
+  if (!form) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
+  }
+
+  const versions = await FormVersion.find({ formId: form._id })
+    .sort({ version: -1 })
+    .lean();
+
+  return versions.map((v) => ({
+    id: v._id.toString(),
+    formId: v.formId.toString(),
+    version: v.version,
+    isPublished: form.publishedVersionId?.toString() === v._id.toString(),
+    isDraft: form.draftVersionId?.toString() === v._id.toString(),
+    createdBy: v.createdBy.toString(),
+    createdAt: v.createdAt,
+    formSchema: v.formSchema,
+  }));
+};
+
+export const getFormSlug = async (
+  formId: string,
+): Promise<{ slug: string; publicUrl: string }> => {
+  const form = await formRepo.findFormById(formId);
+  if (!form) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
+  }
+  return {
+    slug: form.slug,
+    publicUrl: `/public/forms/${form.slug}`,
+  };
 };
 
 export const updateFormSettings = async (
@@ -156,10 +280,21 @@ export const updateFormSettings = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
 
-  const updatedForm = await formRepo.updateForm(formId, {
-    settings: { ...form.settings, ...data },
-  });
-  return toFormResponse(updatedForm!);
+  const draftVersion = await ensureDraftVersion(form);
+  draftVersion.formSchema.settings = {
+    ...draftVersion.formSchema.settings,
+    ...data,
+  };
+
+  draftVersion.markModified("formSchema");
+  await draftVersion.save();
+
+  if (form.publishedVersionId) {
+    form.hasUnpublishedChanges = true;
+    await form.save();
+  }
+
+  return toFormResponse(form);
 };
 
 export const updateFormTheme = async (
@@ -171,10 +306,21 @@ export const updateFormTheme = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
 
-  const updatedForm = await formRepo.updateForm(formId, {
-    theme: { ...form.theme, ...data },
-  });
-  return toFormResponse(updatedForm!);
+  const draftVersion = await ensureDraftVersion(form);
+  draftVersion.formSchema.theme = {
+    ...draftVersion.formSchema.theme,
+    ...data,
+  };
+
+  draftVersion.markModified("formSchema");
+  await draftVersion.save();
+
+  if (form.publishedVersionId) {
+    form.hasUnpublishedChanges = true;
+    await form.save();
+  }
+
+  return toFormResponse(form);
 };
 
 export const updateFormShare = async (

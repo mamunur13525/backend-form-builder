@@ -13,9 +13,13 @@ import uploadRoutes from "../modules/uploads/upload.route";
 import notificationRoutes from "../modules/notifications/notification.route";
 import workspaceRoutes from "../modules/workspaces/workspace.route";
 
+import { getPublicForm } from "../modules/public-form/public-form.controller";
+
 const router: ExpressRouter = Router();
 
 const apiPrefix = "/api/v1";
+
+router.get("/f/:slug", getPublicForm);
 
 router.use(`${apiPrefix}/auth`, authRoutes);
 router.use(`${apiPrefix}/users`, userRoutes);

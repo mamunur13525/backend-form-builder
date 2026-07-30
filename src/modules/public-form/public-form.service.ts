@@ -1,29 +1,64 @@
 import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
 import { nanoid } from "nanoid";
+import mongoose from "mongoose";
 import { Form } from "../../models/Form";
+import { FormVersion } from "../../models/FormVersion";
 import { FormResponse } from "../../models/FormResponse";
-import { FormShare } from "../../models/FormShare";
 
-export const getPublicForm = async (slug: string): Promise<any> => {
-  const form = await Form.findOne({ slug, status: "published" })
-    .select("-settings.requireLogin -settings.collectIP")
-    .lean();
-
-  if (!form) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
+const buildPublicFormQuery = (slugOrId: string) => {
+  const query: any = { status: "published" };
+  if (mongoose.Types.ObjectId.isValid(slugOrId)) {
+    query.$or = [{ slug: slugOrId }, { _id: slugOrId }];
+  } else {
+    query.slug = slugOrId;
   }
-
-  return form;
+  return query;
 };
 
-export const getFormSchema = async (slug: string): Promise<any> => {
-  const form = await Form.findOne({ slug, status: "published" }).lean();
-  if (!form) {
+export const getPublicForm = async (slugOrId: string): Promise<any> => {
+  const form = await Form.findOne(buildPublicFormQuery(slugOrId)).lean();
+  if (!form || !form.publishedVersionId) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
   }
 
-  const fields = (form.fields || [])
+  const version = await FormVersion.findById(form.publishedVersionId).lean();
+  if (!version) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Published form version not found");
+  }
+
+  return {
+    id: form._id,
+    title: form.title,
+    slug: form.slug,
+    status: form.status,
+    formVersionId: version._id,
+    version: version.version,
+    fields: version.formSchema.fields,
+    theme: version.formSchema.theme,
+    settings: {
+      oneQuestionAtATime: version.formSchema.settings?.oneQuestionAtATime,
+      showProgressBar: version.formSchema.settings?.showProgressBar,
+      allowMultipleSubmissions: version.formSchema.settings?.allowMultipleSubmissions,
+    },
+    createdBy: form.createdBy,
+    createdAt: form.createdAt,
+    updatedAt: form.updatedAt,
+  };
+};
+
+export const getFormSchema = async (slugOrId: string): Promise<any> => {
+  const form = await Form.findOne(buildPublicFormQuery(slugOrId)).lean();
+  if (!form || !form.publishedVersionId) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
+  }
+
+  const version = await FormVersion.findById(form.publishedVersionId).lean();
+  if (!version) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Published form version not found");
+  }
+
+  const fields = (version.formSchema.fields || [])
     .filter((f: any) => f.isActive)
     .sort((a: any, b: any) => a.order - b.order)
     .map(({ logic, ...rest }: any) => rest);
@@ -32,49 +67,83 @@ export const getFormSchema = async (slug: string): Promise<any> => {
     form: {
       id: form._id,
       title: form.title,
-      settings: form.settings,
+      version: version.version,
+      formVersionId: version._id,
+      settings: version.formSchema.settings,
     },
     fields,
   };
 };
 
-export const getFormTheme = async (slug: string): Promise<any> => {
-  const form = await Form.findOne({ slug, status: "published" })
-    .select("theme title")
-    .lean();
-
-  if (!form) {
+export const getFormTheme = async (slugOrId: string): Promise<any> => {
+  const form = await Form.findOne(buildPublicFormQuery(slugOrId)).lean();
+  if (!form || !form.publishedVersionId) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
   }
 
-  return form;
+  const version = await FormVersion.findById(form.publishedVersionId).lean();
+  if (!version) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Published form version not found");
+  }
+
+  return {
+    title: form.title,
+    theme: version.formSchema.theme,
+  };
 };
 
-export const getFormPreview = async (slug: string): Promise<any> => {
-  const form = await Form.findOne({ slug }).lean();
+export const getFormPreview = async (slugOrId: string): Promise<any> => {
+  let query: any = {};
+  if (mongoose.Types.ObjectId.isValid(slugOrId)) {
+    query.$or = [{ slug: slugOrId }, { _id: slugOrId }];
+  } else {
+    query.slug = slugOrId;
+  }
+
+  const form = await Form.findOne(query).lean();
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
 
-  const fields = (form.fields || [])
-    .filter((f: any) => f.isActive)
-    .sort((a: any, b: any) => a.order - b.order);
+  let versionId = form.publishedVersionId || form.draftVersionId;
+  let fields: any[] = [];
+  let theme = form.theme;
+  let settings = form.settings;
 
-  return { form, fields };
+  if (versionId) {
+    const version = await FormVersion.findById(versionId).lean();
+    if (version) {
+      fields = (version.formSchema.fields || [])
+        .filter((f: any) => f.isActive)
+        .sort((a: any, b: any) => a.order - b.order);
+      theme = version.formSchema.theme;
+      settings = version.formSchema.settings;
+    }
+  }
+
+  return {
+    form: {
+      ...form,
+      theme,
+      settings,
+    },
+    fields,
+  };
 };
 
 export const submitForm = async (
-  slug: string,
+  slugOrId: string,
   data: { answers: any[]; sessionId?: string },
   metadata?: any
 ): Promise<any> => {
-  const form = await Form.findOne({ slug, status: "published" });
-  if (!form) {
+  const form = await Form.findOne(buildPublicFormQuery(slugOrId));
+  if (!form || !form.publishedVersionId) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
   }
 
   const response = await FormResponse.create({
     formId: form._id,
+    formVersionId: form.publishedVersionId,
     answers: data.answers,
     sessionId: data.sessionId || `session_${nanoid()}`,
     metadata: {
@@ -87,21 +156,23 @@ export const submitForm = async (
 
   return {
     submissionId: response._id,
+    formVersionId: form.publishedVersionId,
     message: "Form submitted successfully",
   };
 };
 
 export const saveDraft = async (
-  slug: string,
+  slugOrId: string,
   data: { answers: any[]; sessionId?: string }
 ): Promise<any> => {
-  const form = await Form.findOne({ slug, status: "published" });
-  if (!form) {
+  const form = await Form.findOne(buildPublicFormQuery(slugOrId));
+  if (!form || !form.publishedVersionId) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
   }
 
   const response = await FormResponse.create({
     formId: form._id,
+    formVersionId: form.publishedVersionId,
     answers: data.answers,
     sessionId: data.sessionId || `draft_${nanoid()}`,
     submittedAt: new Date(),
@@ -109,16 +180,24 @@ export const saveDraft = async (
 
   return {
     submissionId: response._id,
+    formVersionId: form.publishedVersionId,
     sessionId: response.sessionId,
     message: "Draft saved successfully",
   };
 };
 
 export const getSubmitStatus = async (
-  slug: string,
+  slugOrId: string,
   submissionId: string
 ): Promise<any> => {
-  const form = await Form.findOne({ slug }).lean();
+  let query: any = {};
+  if (mongoose.Types.ObjectId.isValid(slugOrId)) {
+    query.$or = [{ slug: slugOrId }, { _id: slugOrId }];
+  } else {
+    query.slug = slugOrId;
+  }
+
+  const form = await Form.findOne(query).lean();
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
@@ -134,6 +213,7 @@ export const getSubmitStatus = async (
 
   return {
     submissionId: response._id,
+    formVersionId: response.formVersionId,
     submittedAt: response.submittedAt,
     status: "completed",
   };

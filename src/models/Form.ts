@@ -55,6 +55,9 @@ export interface IForm extends Document {
   title: string;
   slug: string;
   status: "draft" | "published" | "archived";
+  draftVersionId?: mongoose.Types.ObjectId;
+  publishedVersionId?: mongoose.Types.ObjectId | null;
+  hasUnpublishedChanges: boolean;
   theme: {
     primaryColor: string;
     backgroundColor: string;
@@ -160,6 +163,10 @@ const formSchema = new Schema<IForm>(
       enum: ["draft", "published", "archived"],
       default: "draft",
     },
+
+    draftVersionId: { type: Schema.Types.ObjectId, ref: "FormVersion" },
+    publishedVersionId: { type: Schema.Types.ObjectId, ref: "FormVersion", default: null },
+    hasUnpublishedChanges: { type: Boolean, default: false },
 
     theme: {
       primaryColor: { type: String, default: "#000000" },

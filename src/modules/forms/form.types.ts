@@ -31,6 +31,10 @@ export interface FormResponse {
   title: string;
   slug: string;
   status: string;
+  draftVersionId?: string;
+  publishedVersionId?: string | null;
+  hasUnpublishedChanges?: boolean;
+  version?: number;
   theme: {
     primaryColor: string;
     backgroundColor: string;

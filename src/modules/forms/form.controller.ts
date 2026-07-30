@@ -13,7 +13,6 @@ export const createForm = asyncHandler(async (req: Request, res: Response) => {
 export const getAllForms = asyncHandler(async (req: Request, res: Response) => {
   const { skip, limit, sort } = getPaginationParams(req.query as any);
   const result = await formService.getAllForms(req.user!.userId, skip, limit, sort);
-  console.log({result})
   sendSuccess(res, result.forms, "Forms retrieved successfully", httpStatus.OK);
 });
 
@@ -55,6 +54,16 @@ export const publishForm = asyncHandler(async (req: Request, res: Response) => {
 export const unpublishForm = asyncHandler(async (req: Request, res: Response) => {
   const form = await formService.unpublishForm(req.params.formId as string);
   sendSuccess(res, form, "Form unpublished successfully");
+});
+
+export const discardDraft = asyncHandler(async (req: Request, res: Response) => {
+  const form = await formService.discardDraft(req.params.formId as string);
+  sendSuccess(res, form, "Draft discarded successfully");
+});
+
+export const getFormVersions = asyncHandler(async (req: Request, res: Response) => {
+  const versions = await formService.getFormVersions(req.params.formId as string);
+  sendSuccess(res, versions, "Form versions retrieved successfully");
 });
 
 export const getFormSlug = asyncHandler(async (req: Request, res: Response) => {

@@ -4,6 +4,7 @@ import { IUser } from "./User";
 
 export interface IFormResponse extends Document {
   formId: IForm["_id"];
+  formVersionId?: mongoose.Types.ObjectId;
   respondentId?: IUser["_id"];
   sessionId: string;
   answers: {
@@ -27,6 +28,7 @@ export interface IFormResponse extends Document {
 const formResponseSchema = new Schema<IFormResponse>(
   {
     formId: { type: Schema.Types.ObjectId, ref: "Form", required: true, index: true },
+    formVersionId: { type: Schema.Types.ObjectId, ref: "FormVersion", index: true },
 
     respondentId: { type: Schema.Types.ObjectId, ref: "User" },
     sessionId: { type: String, default: "" },

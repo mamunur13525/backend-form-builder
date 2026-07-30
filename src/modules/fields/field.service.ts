@@ -16,7 +16,7 @@ export const createField = async (
   const order = (await fieldRepo.getMaxOrder(formId)) + 1;
   const fieldKey = `field_${nanoid(8)}`;
 
-  const field = await fieldRepo.createField({
+  const result = await fieldRepo.createField({
     formId,
     fieldKey,
     label: data.label,
@@ -30,7 +30,7 @@ export const createField = async (
     appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
   });
 
-  return field;
+  return { field: result.field, hasUnpublishedChanges: result.hasUnpublishedChanges };
 };
 
 export const getFieldsByFormId = async (formId: string): Promise<any[]> => {
@@ -58,31 +58,34 @@ export const updateField = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
 
-  const updated = await fieldRepo.updateField(formId, fieldId, data);
-  return updated;
+  const result = await fieldRepo.updateField(formId, fieldId, data);
+  if (!result) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
+  }
+  return { field: result.field, hasUnpublishedChanges: result.hasUnpublishedChanges };
 };
 
 export const deleteField = async (
   formId: string,
   fieldId: string
-): Promise<void> => {
+): Promise<{ hasUnpublishedChanges: boolean }> => {
   const field = await fieldRepo.findFieldById(formId, fieldId);
   if (!field) {
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
-  await fieldRepo.deleteField(formId, fieldId);
+  return fieldRepo.deleteField(formId, fieldId);
 };
 
 export const reorderFields = async (
   formId: string,
   data: ReorderFieldsBody
-): Promise<void> => {
+): Promise<{ hasUnpublishedChanges: boolean }> => {
   const updates = data.fieldIds.map((fieldId, index) => ({
     fieldId,
     order: index + 1,
   }));
 
-  await fieldRepo.updateFieldOrders(updates);
+  return fieldRepo.updateFieldOrders(formId, updates);
 };
 
 export const duplicateField = async (
@@ -97,7 +100,7 @@ export const duplicateField = async (
   const order = (await fieldRepo.getMaxOrder(formId)) + 1;
   const fieldKey = `field_${nanoid(8)}`;
 
-  const newField = await fieldRepo.createField({
+  const result = await fieldRepo.createField({
     formId,
     fieldKey,
     label: `${field.label} (copy)`,
@@ -115,7 +118,7 @@ export const duplicateField = async (
     },
   });
 
-  return newField;
+  return { field: result.field, hasUnpublishedChanges: result.hasUnpublishedChanges };
 };
 
 export const updateFieldLogic = async (
@@ -128,8 +131,11 @@ export const updateFieldLogic = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
 
-  const updated = await fieldRepo.updateField(formId, fieldId, { logic: data.logic });
-  return updated;
+  const result = await fieldRepo.updateField(formId, fieldId, { logic: data.logic });
+  if (!result) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
+  }
+  return { field: result.field, hasUnpublishedChanges: result.hasUnpublishedChanges };
 };
 
 export const deleteFieldLogic = async (
@@ -141,6 +147,9 @@ export const deleteFieldLogic = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
   }
 
-  const updated = await fieldRepo.updateField(formId, fieldId, { logic: [] });
-  return updated;
+  const result = await fieldRepo.updateField(formId, fieldId, { logic: [] });
+  if (!result) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Field not found");
+  }
+  return { field: result.field, hasUnpublishedChanges: result.hasUnpublishedChanges };
 };
