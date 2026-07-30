@@ -7,21 +7,21 @@ export interface IFormField {
   helperText: string;
   placeholder: string;
   type:
-    | "shortText"
-    | "longText"
-    | "email"
-    | "phone"
-    | "number"
-    | "date"
-    | "time"
-    | "radio"
-    | "checkbox"
-    | "select"
-    | "multiSelect"
-    | "file"
-    | "rating"
-    | "yesNo"
-    | "url";
+  | "shortText"
+  | "longText"
+  | "email"
+  | "phone"
+  | "number"
+  | "date"
+  | "time"
+  | "radio"
+  | "checkbox"
+  | "select"
+  | "multiSelect"
+  | "file"
+  | "rating"
+  | "yesNo"
+  | "url";
   required: boolean;
   order: number;
   options: { label?: string; value?: string }[];
@@ -51,7 +51,6 @@ export interface IFormField {
 
 export interface IForm extends Document {
   title: string;
-  description: string;
   slug: string;
   status: "draft" | "published" | "archived";
   theme: {
@@ -150,7 +149,6 @@ const formFieldSchema = new Schema<IFormField>(
 const formSchema = new Schema<IForm>(
   {
     title: { type: String, required: true },
-    description: { type: String, default: "" },
     slug: { type: String, required: true, unique: true, index: true },
 
     status: {

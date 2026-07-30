@@ -3,7 +3,6 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 interface IBlock extends Document {
   formId: mongoose.Types.ObjectId;
   title: string;
-  description: string;
   type: string;
   order: number;
   createdAt: Date;
@@ -14,7 +13,6 @@ const blockSchema = new Schema<IBlock>(
   {
     formId: { type: Schema.Types.ObjectId, ref: "Form", required: true, index: true },
     title: { type: String, default: "" },
-    description: { type: String, default: "" },
     type: { type: String, default: "section" },
     order: { type: Number, required: true },
   },
@@ -28,7 +26,6 @@ const Block = mongoose.model<IBlock>("Block", blockSchema);
 export const createBlock = async (data: {
   formId: string;
   title: string;
-  description: string;
   type: string;
   order: number;
 }): Promise<IBlock> => {

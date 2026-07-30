@@ -15,7 +15,6 @@ import {
 const toFormResponse = (form: any): FormResponse => ({
   id: form._id.toString(),
   title: form.title,
-  description: form.description,
   slug: form.slug,
   status: form.status,
   theme: form.theme,
@@ -34,7 +33,6 @@ export const createForm = async (
   const slug = await generateUniqueSlug(data.title, formRepo.checkSlugExists);
   const form = await formRepo.createForm({
     title: data.title,
-    description: data.description || "",
     slug,
     createdBy: userId,
   });
@@ -101,7 +99,6 @@ export const duplicateForm = async (
 
   const form = await formRepo.createForm({
     title: `${original.title} (copy)`,
-    description: original.description,
     slug,
     createdBy: userId,
   });

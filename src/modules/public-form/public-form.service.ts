@@ -32,7 +32,6 @@ export const getFormSchema = async (slug: string): Promise<any> => {
     form: {
       id: form._id,
       title: form.title,
-      description: form.description,
       settings: form.settings,
     },
     fields,

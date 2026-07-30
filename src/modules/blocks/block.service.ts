@@ -8,7 +8,6 @@ export const createBlock = async (formId: string, data: CreateBlockBody): Promis
   const block = await blockRepo.createBlock({
     formId,
     title: data.title || "",
-    description: data.description || "",
     type: data.type || "section",
     order,
   });

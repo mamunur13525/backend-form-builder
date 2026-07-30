@@ -3,14 +3,12 @@ import { z } from "zod";
 export const createFormSchema = {
   body: z.object({
     title: z.string().min(1, "Title is required").max(200),
-    description: z.string().max(2000).optional(),
   }),
 };
 
 export const updateFormSchema = {
   body: z.object({
     title: z.string().min(1).max(200).optional(),
-    description: z.string().max(2000).optional(),
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),

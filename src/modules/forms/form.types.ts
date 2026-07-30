@@ -1,11 +1,9 @@
 export interface CreateFormBody {
   title: string;
-  description?: string;
 }
 
 export interface UpdateFormBody {
   title?: string;
-  description?: string;
 }
 
 export interface UpdateFormSettingsBody {
@@ -31,7 +29,6 @@ export interface UpdateFormShareBody {
 export interface FormResponse {
   id: string;
   title: string;
-  description: string;
   slug: string;
   status: string;
   theme: {

@@ -3,7 +3,6 @@ import { FormShare, IFormShare } from "../../models/FormShare";
 
 export const createForm = async (data: {
   title: string;
-  description: string;
   slug: string;
   createdBy: string;
 }): Promise<IForm> => {

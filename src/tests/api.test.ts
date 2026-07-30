@@ -72,7 +72,6 @@ describe("Typeform API Endpoints", () => {
     it("should create a new form", async () => {
       const res = await api.post("/api/v1/forms").set("Authorization", `Bearer ${authToken}`).send({
         title: "Test Form",
-        description: "Test description",
       });
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);

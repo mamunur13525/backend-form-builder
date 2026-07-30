@@ -3,7 +3,6 @@ import { z } from "zod";
 export const createBlockSchema = {
   body: z.object({
     title: z.string().max(200).optional(),
-    description: z.string().max(2000).optional(),
     type: z.string().optional(),
   }),
   params: z.object({
@@ -14,7 +13,6 @@ export const createBlockSchema = {
 export const updateBlockSchema = {
   body: z.object({
     title: z.string().max(200).optional(),
-    description: z.string().max(2000).optional(),
     type: z.string().optional(),
   }),
   params: z.object({
