@@ -16,6 +16,8 @@ export interface CreateFieldBody {
   appearance?: {
     width?: "full" | "half";
     icon?: string;
+    submitButtonText?: string;
+    submitButtonColor?: string;
   };
 }
 
@@ -37,6 +39,8 @@ export interface UpdateFieldBody {
   appearance?: {
     width?: "full" | "half";
     icon?: string;
+    submitButtonText?: string;
+    submitButtonColor?: string;
   };
 }
 

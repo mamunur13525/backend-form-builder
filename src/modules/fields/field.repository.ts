@@ -34,7 +34,7 @@ export const createField = async (data: {
     required: data.required || false,
     options: data.options || [],
     validation: data.validation || {},
-    appearance: data.appearance || { width: "full", icon: "" },
+    appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
     isActive: true,
     logic: [],
   };

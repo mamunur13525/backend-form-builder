@@ -33,6 +33,8 @@ export const createFieldSchema = {
       .object({
         width: z.enum(["full", "half"]).optional(),
         icon: z.string().optional(),
+        submitButtonText: z.string().optional(),
+        submitButtonColor: z.string().optional(),
       })
       .optional(),
   }).strict(), // Prevent additional fields like 'order' from being passed
@@ -76,6 +78,8 @@ export const updateFieldSchema = {
       .object({
         width: z.enum(["full", "half"]).optional(),
         icon: z.string().optional(),
+        submitButtonText: z.string().optional(),
+        submitButtonColor: z.string().optional(),
       })
       .optional(),
   }),

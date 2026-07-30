@@ -27,7 +27,7 @@ export const createField = async (
     required: data.required || false,
     options: data.options || [],
     validation: data.validation || {},
-    appearance: data.appearance || { width: "full", icon: "" },
+    appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
   });
 
   return field;
@@ -108,7 +108,11 @@ export const duplicateField = async (
     required: field.required,
     options: field.options,
     validation: field.validation,
-    appearance: field.appearance,
+    appearance: {
+      ...field.appearance,
+      submitButtonText: field.appearance.submitButtonText || "",
+      submitButtonColor: field.appearance.submitButtonColor || "",
+    },
   });
 
   return newField;

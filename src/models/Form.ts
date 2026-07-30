@@ -43,6 +43,8 @@ export interface IFormField {
   appearance: {
     width: "full" | "half";
     icon: string;
+    submitButtonText?: string;
+    submitButtonColor?: string;
   };
   isActive: boolean;
   createdAt: Date;
@@ -139,6 +141,8 @@ const formFieldSchema = new Schema<IFormField>(
     appearance: {
       width: { type: String, enum: ["full", "half"], default: "full" },
       icon: { type: String, default: "" },
+      submitButtonText: { type: String, default: "" },
+      submitButtonColor: { type: String, default: "" },
     },
 
     isActive: { type: Boolean, default: true },
