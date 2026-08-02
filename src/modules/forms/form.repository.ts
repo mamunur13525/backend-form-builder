@@ -39,6 +39,15 @@ export const checkSlugExists = async (slug: string): Promise<boolean> => {
   return !!form;
 };
 
+export const checkTitleExists = async (title: string, excludeFormId?: string): Promise<boolean> => {
+  const query: Record<string, any> = { title };
+  if (excludeFormId) {
+    query._id = { $ne: excludeFormId };
+  }
+  const form = await Form.findOne(query);
+  return !!form;
+};
+
 export const updateForm = async (
   formId: string,
   data: Record<string, any>

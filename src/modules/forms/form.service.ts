@@ -114,6 +114,10 @@ export const updateForm = async (
   await ensureDraftVersion(form);
 
   if (data.title !== undefined) {
+    const existingForm = await formRepo.checkTitleExists(data.title, formId);
+    if (existingForm) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Form with this title already exists");
+    }
     form.title = data.title;
   }
 
