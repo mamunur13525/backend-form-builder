@@ -1,47 +1,46 @@
+import { FieldType } from "../../constants/fieldTypes";
+import { ICoverImage, IFieldOption, IFieldSettings } from "../../models/Form";
+
+export interface FieldValidationBody {
+  minLength?: number | null;
+  maxLength?: number | null;
+  min?: number | null;
+  max?: number | null;
+  pattern?: string;
+  message?: string;
+}
+
+export interface FieldAppearanceBody {
+  width?: "full" | "half";
+  icon?: string;
+  submitButtonText?: string;
+  submitButtonColor?: string;
+}
+
 export interface CreateFieldBody {
-  type: string;
+  type: FieldType;
   label: string;
   helperText?: string;
   placeholder?: string;
   required?: boolean;
-  options?: { label?: string; value?: string }[];
-  validation?: {
-    minLength?: number;
-    maxLength?: number;
-    min?: number;
-    max?: number;
-    pattern?: string;
-    message?: string;
-  };
-  appearance?: {
-    width?: "full" | "half";
-    icon?: string;
-    submitButtonText?: string;
-    submitButtonColor?: string;
-  };
+  coverImage?: ICoverImage | null;
+  options?: IFieldOption[];
+  validation?: FieldValidationBody;
+  settings?: IFieldSettings;
+  appearance?: FieldAppearanceBody;
 }
 
 export interface UpdateFieldBody {
-  type?: string;
+  type?: FieldType;
   label?: string;
   helperText?: string;
   placeholder?: string;
   required?: boolean;
-  options?: { label?: string; value?: string }[];
-  validation?: {
-    minLength?: number;
-    maxLength?: number;
-    min?: number;
-    max?: number;
-    pattern?: string;
-    message?: string;
-  };
-  appearance?: {
-    width?: "full" | "half";
-    icon?: string;
-    submitButtonText?: string;
-    submitButtonColor?: string;
-  };
+  coverImage?: ICoverImage | null;
+  options?: IFieldOption[];
+  validation?: FieldValidationBody;
+  settings?: IFieldSettings;
+  appearance?: FieldAppearanceBody;
 }
 
 export interface ReorderFieldsBody {

@@ -28,8 +28,10 @@ export const createField = async (data: {
   helperText?: string;
   placeholder?: string;
   required?: boolean;
+  coverImage?: any;
   options?: { label?: string; value?: string }[];
   validation?: any;
+  settings?: any;
   appearance?: any;
 }): Promise<{ field: IFormField; hasUnpublishedChanges: boolean }> => {
   const { form, draftVersion } = await getDraftVersionForForm(data.formId);
@@ -44,8 +46,10 @@ export const createField = async (data: {
     helperText: data.helperText || "",
     placeholder: data.placeholder || "",
     required: data.required || false,
+    coverImage: data.coverImage || undefined,
     options: data.options || [],
     validation: data.validation || {},
+    settings: data.settings || {},
     appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
     isActive: true,
     logic: [],
