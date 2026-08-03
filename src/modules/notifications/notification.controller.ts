@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, RequestHandler } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { sendSuccess } from "../../utils/ApiResponse";
 import { httpStatus } from "../../constants/httpStatus";
@@ -8,14 +8,14 @@ import { nanoid } from "nanoid";
 // In-memory store for notifications (replace with DB model in production)
 let notifications: any[] = [];
 
-export const getNotifications = asyncHandler(async (req: Request, res: Response) => {
+export const getNotifications: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const userNotifications = notifications.filter(
     (n) => n.userId === req.user!.userId
   );
   sendSuccess(res, userNotifications, "Notifications retrieved successfully");
 });
 
-export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
+export const markAsRead: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const notification = notifications.find(
     (n) => n.id === req.params.id && n.userId === req.user!.userId
   );
@@ -26,14 +26,14 @@ export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, notification, "Notification marked as read");
 });
 
-export const markAllAsRead = asyncHandler(async (req: Request, res: Response) => {
+export const markAllAsRead: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   notifications
     .filter((n) => n.userId === req.user!.userId)
     .forEach((n) => { n.read = true; });
   sendSuccess(res, null, "All notifications marked as read");
 });
 
-export const deleteNotification = asyncHandler(async (req: Request, res: Response) => {
+export const deleteNotification: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const index = notifications.findIndex(
     (n) => n.id === req.params.id && n.userId === req.user!.userId
   );

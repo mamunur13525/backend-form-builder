@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { ApiError } from "../utils/ApiError";
@@ -12,8 +12,8 @@ interface JwtPayload {
   name: string;
 }
 
-export const authenticate = asyncHandler(
-  async (req: Request, _res: Response, next: NextFunction) => {
+export const authenticate: RequestHandler = asyncHandler(
+  async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {

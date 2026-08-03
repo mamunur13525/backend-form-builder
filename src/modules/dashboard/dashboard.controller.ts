@@ -1,11 +1,11 @@
-import { Request, Response } from "express";
+import { Request, Response, RequestHandler } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { sendSuccess } from "../../utils/ApiResponse";
 import { Form } from "../../models/Form";
 import { FormResponse } from "../../models/FormResponse";
 import { User } from "../../models/User";
 
-export const getDashboardOverview = asyncHandler(async (_req: Request, res: Response) => {
+export const getDashboardOverview: RequestHandler = asyncHandler(async (_req: Request, res: Response) => {
   const [totalForms, totalResponses, totalUsers, recentForms] = await Promise.all([
     Form.countDocuments(),
     FormResponse.countDocuments(),
@@ -21,7 +21,7 @@ export const getDashboardOverview = asyncHandler(async (_req: Request, res: Resp
   });
 });
 
-export const getDashboardForms = asyncHandler(async (req: Request, res: Response) => {
+export const getDashboardForms: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const forms = await Form.find()
     .sort({ createdAt: -1 })
     .limit(10)
@@ -31,7 +31,7 @@ export const getDashboardForms = asyncHandler(async (req: Request, res: Response
   sendSuccess(res, forms);
 });
 
-export const getDashboardResponses = asyncHandler(async (_req: Request, res: Response) => {
+export const getDashboardResponses: RequestHandler = asyncHandler(async (_req: Request, res: Response) => {
   const [total, today, thisWeek, thisMonth] = await Promise.all([
     FormResponse.countDocuments(),
     FormResponse.countDocuments({
@@ -48,7 +48,7 @@ export const getDashboardResponses = asyncHandler(async (_req: Request, res: Res
   sendSuccess(res, { total, today, thisWeek, thisMonth });
 });
 
-export const getDashboardUsers = asyncHandler(async (_req: Request, res: Response) => {
+export const getDashboardUsers: RequestHandler = asyncHandler(async (_req: Request, res: Response) => {
   const [total, active, admins] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ isActive: true }),
@@ -58,7 +58,7 @@ export const getDashboardUsers = asyncHandler(async (_req: Request, res: Respons
   sendSuccess(res, { total, active, admins, editors: 0, viewers: 0 });
 });
 
-export const getDashboardActivity = asyncHandler(async (_req: Request, res: Response) => {
+export const getDashboardActivity: RequestHandler = asyncHandler(async (_req: Request, res: Response) => {
   const recentResponses = await FormResponse.find()
     .sort({ submittedAt: -1 })
     .limit(10)

@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
+import { Request, Response, RequestHandler } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { sendSuccess } from "../../utils/ApiResponse";
 import { Form } from "../../models/Form";
 import { FormResponse } from "../../models/FormResponse";
 
-export const getAnalytics = asyncHandler(async (req: Request, res: Response) => {
+export const getAnalytics: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const formId = req.params.formId as string;
 
   const [totalViews, totalSubmissions, form] = await Promise.all([
@@ -22,7 +22,7 @@ export const getAnalytics = asyncHandler(async (req: Request, res: Response) => 
   });
 });
 
-export const getAnalyticsOverview = asyncHandler(async (req: Request, res: Response) => {
+export const getAnalyticsOverview: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const formId = req.params.formId as string;
 
   const [totalResponses, todayResponses, form] = await Promise.all([
@@ -44,12 +44,12 @@ export const getAnalyticsOverview = asyncHandler(async (req: Request, res: Respo
   });
 });
 
-export const getAnalyticsViews = asyncHandler(async (req: Request, res: Response) => {
+export const getAnalyticsViews: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   // Placeholder - implement with actual view tracking
   sendSuccess(res, { formId: req.params.formId as string, views: 0, uniqueVisitors: 0 });
 });
 
-export const getAnalyticsSubmissions = asyncHandler(async (req: Request, res: Response) => {
+export const getAnalyticsSubmissions: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const formId = req.params.formId as string;
   const submissions = await FormResponse.find({ formId })
     .sort({ submittedAt: -1 })
@@ -60,7 +60,7 @@ export const getAnalyticsSubmissions = asyncHandler(async (req: Request, res: Re
   sendSuccess(res, { total: submissions.length, submissions });
 });
 
-export const getAnalyticsConversion = asyncHandler(async (req: Request, res: Response) => {
+export const getAnalyticsConversion: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const formId = req.params.formId as string;
   const total = await FormResponse.countDocuments({ formId });
 
@@ -73,7 +73,7 @@ export const getAnalyticsConversion = asyncHandler(async (req: Request, res: Res
   });
 });
 
-export const getAnalyticsDropoff = asyncHandler(async (req: Request, res: Response) => {
+export const getAnalyticsDropoff: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const formId = req.params.formId as string;
   const form = await Form.findById(formId).select("fields").lean();
   const responses = await FormResponse.find({ formId }).lean();
@@ -100,7 +100,7 @@ export const getAnalyticsDropoff = asyncHandler(async (req: Request, res: Respon
   sendSuccess(res, { formId, dropoffData });
 });
 
-export const getAnalyticsField = asyncHandler(async (req: Request, res: Response) => {
+export const getAnalyticsField: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { formId, fieldId } = req.params;
   const form = await Form.findOne(
     { _id: formId, "fields._id": fieldId },
@@ -108,7 +108,8 @@ export const getAnalyticsField = asyncHandler(async (req: Request, res: Response
   ).lean();
 
   if (!form || !form.fields || form.fields.length === 0) {
-    return sendSuccess(res, null, "Field not found");
+    sendSuccess(res, null, "Field not found");
+    return;
   }
 
   const field = form.fields[0];

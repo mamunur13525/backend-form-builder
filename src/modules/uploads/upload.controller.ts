@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, RequestHandler } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { sendSuccess } from "../../utils/ApiResponse";
 import { httpStatus } from "../../constants/httpStatus";
@@ -14,7 +14,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
+export const uploadFile: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   if (!req.file) {
     throw new ApiError(httpStatus.BAD_REQUEST, "No file uploaded");
   }
@@ -37,7 +37,7 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
   }, "File uploaded successfully", httpStatus.CREATED);
 });
 
-export const getFile = asyncHandler(async (req: Request, res: Response) => {
+export const getFile: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const fileId = req.params.fileId as string;
 
   // Find file in upload directory
@@ -69,7 +69,7 @@ export const getFile = asyncHandler(async (req: Request, res: Response) => {
   res.sendFile(filePath);
 });
 
-export const deleteFile = asyncHandler(async (req: Request, res: Response) => {
+export const deleteFile: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const fileId = req.params.fileId as string;
 
   const files = fs.readdirSync(uploadDir);
