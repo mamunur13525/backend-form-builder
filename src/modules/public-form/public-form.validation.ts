@@ -5,7 +5,7 @@ export const submitFormSchema = {
     answers: z.array(
       z.object({
         fieldKey: z.string().min(1),
-        label: z.string().min(1),
+        label: z.string(),
         type: z.string().min(1),
         value: z.any(),
       })
@@ -22,7 +22,7 @@ export const saveDraftSchema = {
     answers: z.array(
       z.object({
         fieldKey: z.string().min(1),
-        label: z.string().min(1),
+        label: z.string(),
         type: z.string().min(1),
         value: z.any(),
       })

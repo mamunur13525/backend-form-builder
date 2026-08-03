@@ -5,27 +5,70 @@ import mongoose from "mongoose";
 import { Form } from "../../models/Form";
 import { FormVersion } from "../../models/FormVersion";
 import { FormResponse } from "../../models/FormResponse";
+import {
+  ClosedFormStatus,
+  closedFormReason,
+  formStatus,
+  isClosedFormStatus,
+} from "../../constants/status";
 
-const buildPublicFormQuery = (slugOrId: string) => {
-  const query: any = { status: "published" };
+const buildFormLookupQuery = (slugOrId: string) => {
   if (mongoose.Types.ObjectId.isValid(slugOrId)) {
-    query.$or = [{ slug: slugOrId }, { _id: slugOrId }];
-  } else {
-    query.slug = slugOrId;
+    return { $or: [{ slug: slugOrId }, { _id: slugOrId }] };
   }
-  return query;
+  return { slug: slugOrId };
 };
 
-export const getPublicForm = async (slugOrId: string): Promise<any> => {
-  const form = await Form.findOne(buildPublicFormQuery(slugOrId)).lean();
-  if (!form || !form.publishedVersionId) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
+/**
+ * Used for forms that were never live (draft/archived) and for slugs that do
+ * not exist, so the two cases stay indistinguishable to the public.
+ */
+const notFoundError = () =>
+  new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
+
+/**
+ * A form that was live and is now closed exists as far as the respondent is
+ * concerned, so it answers 410 with a machine-readable reason the client can
+ * use to render a closed-form screen.
+ */
+const closedFormError = (status: ClosedFormStatus, title: string) => {
+  const reason = closedFormReason[status];
+  return new ApiError(httpStatus.GONE, reason.message, [
+    { code: reason.code, status, title },
+  ]);
+};
+
+const findPublicForm = async (slugOrId: string) => {
+  const form = await Form.findOne(buildFormLookupQuery(slugOrId)).lean();
+  if (!form) {
+    throw notFoundError();
   }
+
+  if (isClosedFormStatus(form.status)) {
+    throw closedFormError(form.status, form.title);
+  }
+
+  if (form.status !== formStatus.PUBLISHED || !form.publishedVersionId) {
+    throw notFoundError();
+  }
+
+  // Re-stated so callers get a non-nullable publishedVersionId.
+  return { ...form, publishedVersionId: form.publishedVersionId };
+};
+
+const findPublicFormWithVersion = async (slugOrId: string) => {
+  const form = await findPublicForm(slugOrId);
 
   const version = await FormVersion.findById(form.publishedVersionId).lean();
   if (!version) {
     throw new ApiError(httpStatus.NOT_FOUND, "Published form version not found");
   }
+
+  return { form, version };
+};
+
+export const getPublicForm = async (slugOrId: string): Promise<any> => {
+  const { form, version } = await findPublicFormWithVersion(slugOrId);
 
   return {
     id: form._id,
@@ -48,15 +91,7 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
 };
 
 export const getFormSchema = async (slugOrId: string): Promise<any> => {
-  const form = await Form.findOne(buildPublicFormQuery(slugOrId)).lean();
-  if (!form || !form.publishedVersionId) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
-  }
-
-  const version = await FormVersion.findById(form.publishedVersionId).lean();
-  if (!version) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Published form version not found");
-  }
+  const { form, version } = await findPublicFormWithVersion(slugOrId);
 
   const fields = (version.formSchema.fields || [])
     .filter((f: any) => f.isActive)
@@ -76,15 +111,7 @@ export const getFormSchema = async (slugOrId: string): Promise<any> => {
 };
 
 export const getFormTheme = async (slugOrId: string): Promise<any> => {
-  const form = await Form.findOne(buildPublicFormQuery(slugOrId)).lean();
-  if (!form || !form.publishedVersionId) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
-  }
-
-  const version = await FormVersion.findById(form.publishedVersionId).lean();
-  if (!version) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Published form version not found");
-  }
+  const { form, version } = await findPublicFormWithVersion(slugOrId);
 
   return {
     title: form.title,
@@ -93,14 +120,7 @@ export const getFormTheme = async (slugOrId: string): Promise<any> => {
 };
 
 export const getFormPreview = async (slugOrId: string): Promise<any> => {
-  let query: any = {};
-  if (mongoose.Types.ObjectId.isValid(slugOrId)) {
-    query.$or = [{ slug: slugOrId }, { _id: slugOrId }];
-  } else {
-    query.slug = slugOrId;
-  }
-
-  const form = await Form.findOne(query).lean();
+  const form = await Form.findOne(buildFormLookupQuery(slugOrId)).lean();
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
@@ -136,10 +156,7 @@ export const submitForm = async (
   data: { answers: any[]; sessionId?: string },
   metadata?: any
 ): Promise<any> => {
-  const form = await Form.findOne(buildPublicFormQuery(slugOrId));
-  if (!form || !form.publishedVersionId) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
-  }
+  const form = await findPublicForm(slugOrId);
 
   const response = await FormResponse.create({
     formId: form._id,
@@ -165,10 +182,7 @@ export const saveDraft = async (
   slugOrId: string,
   data: { answers: any[]; sessionId?: string }
 ): Promise<any> => {
-  const form = await Form.findOne(buildPublicFormQuery(slugOrId));
-  if (!form || !form.publishedVersionId) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
-  }
+  const form = await findPublicForm(slugOrId);
 
   const response = await FormResponse.create({
     formId: form._id,
@@ -186,18 +200,15 @@ export const saveDraft = async (
   };
 };
 
+/**
+ * Stays reachable after the form is unpublished or cancelled: a respondent who
+ * already submitted can still look their submission up.
+ */
 export const getSubmitStatus = async (
   slugOrId: string,
   submissionId: string
 ): Promise<any> => {
-  let query: any = {};
-  if (mongoose.Types.ObjectId.isValid(slugOrId)) {
-    query.$or = [{ slug: slugOrId }, { _id: slugOrId }];
-  } else {
-    query.slug = slugOrId;
-  }
-
-  const form = await Form.findOne(query).lean();
+  const form = await Form.findOne(buildFormLookupQuery(slugOrId)).lean();
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }

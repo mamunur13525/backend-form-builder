@@ -56,6 +56,11 @@ export const unpublishForm = asyncHandler(async (req: Request, res: Response) =>
   sendSuccess(res, form, "Form unpublished successfully");
 });
 
+export const cancelForm = asyncHandler(async (req: Request, res: Response) => {
+  const form = await formService.cancelForm(req.params.formId as string);
+  sendSuccess(res, form, "Form cancelled successfully");
+});
+
 export const discardDraft = asyncHandler(async (req: Request, res: Response) => {
   const form = await formService.discardDraft(req.params.formId as string);
   sendSuccess(res, form, "Draft discarded successfully");

@@ -7,6 +7,11 @@ import { FormVersion } from "../../models/FormVersion";
 import { Form } from "../../models/Form";
 import { createInitialVersion, ensureDraftVersion } from "./version.helper";
 import {
+  ClosedFormStatus,
+  formStatus,
+  isClosedFormStatus,
+} from "../../constants/status";
+import {
   CreateFormBody,
   UpdateFormBody,
   UpdateFormSettingsBody,
@@ -69,7 +74,7 @@ export const createForm = async (
   form.draftVersionId = v1._id as any;
   form.publishedVersionId = null;
   form.hasUnpublishedChanges = false;
-  form.status = "draft";
+  form.status = formStatus.DRAFT;
   await form.save();
 
   return toFormResponse(form);
@@ -168,14 +173,14 @@ export const duplicateForm = async (
   newForm.draftVersionId = v1._id as any;
   newForm.publishedVersionId = null;
   newForm.hasUnpublishedChanges = false;
-  newForm.status = "draft";
+  newForm.status = formStatus.DRAFT;
   await newForm.save();
 
   return toFormResponse(newForm);
 };
 
 export const archiveForm = async (formId: string): Promise<FormResponse> => {
-  const form = await formRepo.updateForm(formId, { status: "archived" });
+  const form = await formRepo.updateForm(formId, { status: formStatus.ARCHIVED });
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
@@ -183,7 +188,7 @@ export const archiveForm = async (formId: string): Promise<FormResponse> => {
 };
 
 export const restoreForm = async (formId: string): Promise<FormResponse> => {
-  const form = await formRepo.updateForm(formId, { status: "draft" });
+  const form = await formRepo.updateForm(formId, { status: formStatus.DRAFT });
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
@@ -196,10 +201,27 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
 
+  // Re-publishing a form that was unpublished or cancelled without any edits
+  // in between restores the exact version that was live before, rather than
+  // promoting a freshly cloned draft.
+  if (isClosedFormStatus(form.status) && form.publishedVersionId && !form.hasUnpublishedChanges) {
+    const publishedVersion = await FormVersion.findById(form.publishedVersionId);
+    if (publishedVersion) {
+      form.status = formStatus.PUBLISHED;
+      form.draftVersionId = publishedVersion._id as any;
+      form.hasUnpublishedChanges = false;
+      form.fields = publishedVersion.formSchema.fields as any;
+      form.settings = publishedVersion.formSchema.settings as any;
+      form.theme = publishedVersion.formSchema.theme as any;
+      await form.save();
+      return toFormResponse(form);
+    }
+  }
+
   const draftVersion = await ensureDraftVersion(form);
 
   form.publishedVersionId = draftVersion._id as any;
-  form.status = "published";
+  form.status = formStatus.PUBLISHED;
   form.hasUnpublishedChanges = false;
 
   // Sync schema to Form document for backwards compatibility
@@ -211,11 +233,42 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
   return toFormResponse(form);
 };
 
+/**
+ * Takes a live form down. The published version is retained so the form can be
+ * published again unchanged, and so existing responses keep a resolvable
+ * version reference.
+ */
 export const unpublishForm = async (formId: string): Promise<FormResponse> => {
-  const form = await formRepo.updateForm(formId, { status: "draft" });
+  return closePublishedForm(formId, formStatus.UNPUBLISHED);
+};
+
+/** Permanently closes a live form. Retains the published version like unpublish. */
+export const cancelForm = async (formId: string): Promise<FormResponse> => {
+  return closePublishedForm(formId, formStatus.CANCELLED);
+};
+
+const closePublishedForm = async (
+  formId: string,
+  status: ClosedFormStatus,
+): Promise<FormResponse> => {
+  const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
+
+  if (form.status === status) {
+    return toFormResponse(form);
+  }
+
+  if (form.status !== formStatus.PUBLISHED && !isClosedFormStatus(form.status)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Only a published form can be ${status}`,
+    );
+  }
+
+  form.status = status;
+  await form.save();
   return toFormResponse(form);
 };
 

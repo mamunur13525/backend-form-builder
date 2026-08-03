@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IUser } from "./User";
+import { FormStatus, formStatus, formStatusValues } from "../constants/status";
 import {
   addressFieldKeys,
   allowedFileTypeValues,
@@ -195,7 +196,7 @@ export interface IFormField {
 export interface IForm extends Document {
   title: string;
   slug: string;
-  status: "draft" | "published" | "archived";
+  status: FormStatus;
   draftVersionId?: mongoose.Types.ObjectId;
   publishedVersionId?: mongoose.Types.ObjectId | null;
   hasUnpublishedChanges: boolean;
@@ -453,8 +454,8 @@ const formSchema = new Schema<IForm>(
 
     status: {
       type: String,
-      enum: ["draft", "published", "archived"],
-      default: "draft",
+      enum: formStatusValues,
+      default: formStatus.DRAFT,
     },
 
     draftVersionId: { type: Schema.Types.ObjectId, ref: "FormVersion" },

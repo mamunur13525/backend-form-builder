@@ -1,3 +1,5 @@
+import { FormStatus } from "../../constants/status";
+
 export interface CreateFormBody {
   title: string;
 }
@@ -30,7 +32,7 @@ export interface FormResponse {
   id: string;
   title: string;
   slug: string;
-  status: string;
+  status: FormStatus;
   draftVersionId?: string;
   publishedVersionId?: string | null;
   hasUnpublishedChanges?: boolean;

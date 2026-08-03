@@ -13,7 +13,7 @@ export const updateResponseSchema = {
       .array(
         z.object({
           fieldKey: z.string().min(1),
-          label: z.string().min(1),
+          label: z.string(),
           type: z.string().min(1),
           value: z.any(),
         })

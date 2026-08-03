@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Form, IForm } from "../../models/Form";
 import { FormVersion, IFormVersion } from "../../models/FormVersion";
+import { formStatus } from "../../constants/status";
 
 export const createInitialVersion = async (
   formId: mongoose.Types.ObjectId | string,
@@ -46,7 +47,7 @@ export const ensureDraftVersion = async (
       { fields: form.fields, settings: form.settings, theme: form.theme }
     );
     form.draftVersionId = v1._id as mongoose.Types.ObjectId;
-    if (form.status === "published" && !form.publishedVersionId) {
+    if (form.status === formStatus.PUBLISHED && !form.publishedVersionId) {
       form.publishedVersionId = v1._id as mongoose.Types.ObjectId;
     }
     await form.save();

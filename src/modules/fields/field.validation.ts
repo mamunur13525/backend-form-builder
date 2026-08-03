@@ -92,7 +92,7 @@ const selectionLimitSchema = z
 
 const addressSubFieldSchema = z.object({
   key: z.enum(addressFieldKeys),
-  label: z.string().min(1).max(200),
+  label: z.string().max(200),
   placeholder: z.string().max(200).optional(),
   required: z.boolean().optional(),
   hidden: z.boolean().optional(),
@@ -213,7 +213,7 @@ export const createFieldSchema = {
   body: z
     .object({
       type: fieldTypeEnum,
-      label: z.string().min(1, "Label is required").max(500),
+      label: z.string().max(500),
       helperText: z.string().max(500).optional(),
       placeholder: z.string().max(200).optional(),
       required: z.boolean().optional(),
