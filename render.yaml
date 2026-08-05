@@ -5,6 +5,7 @@ services:
     plan: starter
     buildCommand: pnpm install && pnpm run build
     startCommand: node dist/index.js
+    rootDir: .
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
