@@ -5,7 +5,6 @@ services:
     plan: starter
     buildCommand: pnpm install && pnpm run build
     startCommand: node dist/index.js
-    rootDir: .
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -22,3 +21,12 @@ services:
         value: 1h
       - key: UPLOAD_DIR
         value: ./uploads
+
+
+       
+
+ 
+    
+
+  
+ 
