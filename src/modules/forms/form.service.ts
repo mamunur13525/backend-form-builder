@@ -145,6 +145,7 @@ export const deleteForm = async (formId: string): Promise<void> => {
 export const duplicateForm = async (
   userId: string,
   formId: string,
+  title: string,
 ): Promise<FormResponse> => {
   const original = await formRepo.findFormById(formId);
   if (!original) {
@@ -153,13 +154,14 @@ export const duplicateForm = async (
 
   const origVersion = await ensureDraftVersion(original, userId);
 
+  const formTitle = title || original.title + " (copy)";
   const slug = await generateUniqueSlug(
-    `${original.title} (copy)`,
+    formTitle,
     formRepo.checkSlugExists,
   );
 
   const newForm = await formRepo.createForm({
-    title: `${original.title} (copy)`,
+    title: formTitle,
     slug,
     createdBy: userId,
   });
@@ -197,6 +199,7 @@ export const restoreForm = async (formId: string): Promise<FormResponse> => {
 
 export const publishForm = async (formId: string): Promise<FormResponse> => {
   const form = await formRepo.findFormById(formId);
+
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
@@ -219,7 +222,6 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
   }
 
   const draftVersion = await ensureDraftVersion(form);
-
   form.publishedVersionId = draftVersion._id as any;
   form.status = formStatus.PUBLISHED;
   form.hasUnpublishedChanges = false;

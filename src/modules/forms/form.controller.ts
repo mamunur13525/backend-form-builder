@@ -32,7 +32,7 @@ export const deleteForm: RequestHandler = asyncHandler(async (req: Request, res:
 });
 
 export const duplicateForm: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const form = await formService.duplicateForm(req.user!.userId, req.params.formId as string);
+  const form = await formService.duplicateForm(req.user!.userId, req.params.formId as string, req.body.title as string);
   sendSuccess(res, form, "Form duplicated successfully", httpStatus.CREATED);
 });
 

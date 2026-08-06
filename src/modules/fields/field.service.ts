@@ -110,7 +110,6 @@ export const reorderFields = async (
     fieldId,
     order: index + 1,
   }));
-
   return fieldRepo.updateFieldOrders(formId, updates);
 };
 

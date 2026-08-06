@@ -27,7 +27,7 @@ export const countForms = async (filter: Record<string, any> = {}): Promise<numb
 };
 
 export const findFormById = async (formId: string): Promise<IForm | null> => {
-  return Form.findById(formId).populate("createdBy", "name email").lean();
+  return Form.findById(formId).populate("createdBy", "name email");
 };
 
 export const findFormBySlug = async (slug: string): Promise<IForm | null> => {
