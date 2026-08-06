@@ -100,8 +100,9 @@ export const login = async (data: LoginBody): Promise<AuthResponse> => {
 export const googleSignup = async (
   data: GoogleSignupBody,
 ): Promise<AuthResponse> => {
+  console.log({ data })
   const googleUser = await authUtils.verifyGoogleToken(data.idToken);
-
+  console.log({ googleUser })
   if (!googleUser.email_verified) {
     throw new ApiError(httpStatus.UNAUTHORIZED, "Google email is not verified");
   }
