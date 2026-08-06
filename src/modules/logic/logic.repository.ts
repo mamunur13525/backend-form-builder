@@ -35,8 +35,6 @@ const formLogicSchema = new Schema<IFormLogic>(
   { timestamps: true }
 );
 
-formLogicSchema.index({ formId: 1 });
-
 const FormLogic = mongoose.model<IFormLogic>("FormLogic", formLogicSchema);
 
 export const createLogic = async (data: {
