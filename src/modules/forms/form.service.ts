@@ -6,6 +6,7 @@ import * as formRepo from "./form.repository";
 import { FormVersion } from "../../models/FormVersion";
 import { Form } from "../../models/Form";
 import { createInitialVersion, ensureDraftVersion } from "./version.helper";
+import { buildFormTheme } from "./form.theme";
 import {
   ClosedFormStatus,
   formStatus,
@@ -26,11 +27,9 @@ const toFormResponse = async (form: any): Promise<FormResponse> => {
     draftVersion = await FormVersion.findById(form.draftVersionId).lean();
   }
 
-  const theme = draftVersion?.formSchema?.theme || form.theme || {
-    primaryColor: "#000000",
-    backgroundColor: "#ffffff",
-    textColor: "#111111",
-  };
+  // Filled in against the defaults so forms created before a theme property
+  // existed still return a complete appearance object.
+  const theme = buildFormTheme(draftVersion?.formSchema?.theme || form.theme);
   const fields = draftVersion?.formSchema?.fields || form.fields || [];
   const settings = draftVersion?.formSchema?.settings || form.settings || {
     oneQuestionAtATime: true,
@@ -169,7 +168,7 @@ export const duplicateForm = async (
   const v1 = await createInitialVersion(newForm._id, userId, {
     fields: JSON.parse(JSON.stringify(origVersion.formSchema.fields || [])),
     settings: JSON.parse(JSON.stringify(origVersion.formSchema.settings || {})),
-    theme: JSON.parse(JSON.stringify(origVersion.formSchema.theme || {})),
+    theme: buildFormTheme(origVersion.formSchema.theme),
   });
 
   newForm.draftVersionId = v1._id as any;
@@ -366,10 +365,7 @@ export const updateFormTheme = async (
   }
 
   const draftVersion = await ensureDraftVersion(form);
-  draftVersion.formSchema.theme = {
-    ...draftVersion.formSchema.theme,
-    ...data,
-  };
+  draftVersion.formSchema.theme = buildFormTheme(draftVersion.formSchema.theme, data);
 
   draftVersion.markModified("formSchema");
   await draftVersion.save();

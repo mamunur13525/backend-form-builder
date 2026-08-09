@@ -21,6 +21,30 @@ import {
   ratingStyles,
   selectionLimitModes,
 } from "../constants/fieldTypes";
+import {
+  contentAlignments,
+  ContentAlignment,
+  cornerRadii,
+  CornerRadius,
+  DEFAULT_ALIGNMENT,
+  DEFAULT_ANSWER_COLOR,
+  DEFAULT_BACKGROUND_COLOR,
+  DEFAULT_BUTTON_COLOR,
+  DEFAULT_BUTTON_TEXT_COLOR,
+  DEFAULT_CORNER_RADIUS,
+  DEFAULT_FONT_SIZE,
+  DEFAULT_PRIMARY_COLOR,
+  DEFAULT_QUESTION_COLOR,
+  DEFAULT_TEXT_COLOR,
+  DEFAULT_THEME_BRIGHTNESS,
+  DEFAULT_THEME_FONT,
+  fontSizes,
+  FontSize,
+  themeFontSources,
+  ThemeFontSource,
+  THEME_BRIGHTNESS_MAX,
+  THEME_BRIGHTNESS_MIN,
+} from "../constants/theme";
 
 /* -------------------------------------------------------------------------- */
 /* Shared pieces                                                              */
@@ -36,6 +60,54 @@ export interface ICoverImage {
 export interface IFieldOption {
   label?: string;
   value?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Form-level appearance (theme)                                              */
+/* -------------------------------------------------------------------------- */
+
+export interface IThemeBackgroundImage {
+  /** ImageKit URL, or a root-relative path served by the uploads module. */
+  url: string;
+  fileId?: string;
+  alt?: string;
+  /**
+   * Relative brightness offset, -100..100, where 0 leaves the image untouched.
+   * Only meaningful while `url` is set.
+   */
+  brightness: number;
+  /** Tile the image at its natural size instead of covering the viewport. */
+  tile: boolean;
+}
+
+export interface IThemeFont {
+  family: string;
+  source: ThemeFontSource;
+  /** Font file to load. Required when `source` is "custom". */
+  url?: string;
+}
+
+/**
+ * Styles the whole form, every page included. Per-field overrides live in
+ * `IFormField.appearance`.
+ */
+export interface IFormTheme {
+  primaryColor: string;
+  backgroundColor: string;
+  /** Fallback copy colour, used wherever a more specific colour is not set. */
+  textColor: string;
+  questionColor: string;
+  answerColor: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  /** Applies to all content: question, answers and button. */
+  alignment: ContentAlignment;
+  fontSize: FontSize;
+  /** Corner radius preset for inputs, choice options and buttons. */
+  roundCorners: CornerRadius;
+  /** Absent when the form has no background image. */
+  backgroundImage?: IThemeBackgroundImage;
+  font: IThemeFont;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -200,11 +272,7 @@ export interface IForm extends Document {
   draftVersionId?: mongoose.Types.ObjectId;
   publishedVersionId?: mongoose.Types.ObjectId | null;
   hasUnpublishedChanges: boolean;
-  theme: {
-    primaryColor: string;
-    backgroundColor: string;
-    textColor: string;
-  };
+  theme: IFormTheme;
   settings: {
     oneQuestionAtATime: boolean;
     showProgressBar: boolean;
@@ -230,6 +298,62 @@ const coverImageSchema = new Schema<ICoverImage>(
     url: { type: String, default: "" },
     fileId: { type: String, default: "" },
     alt: { type: String, default: "" },
+  },
+  subDoc
+);
+
+/* -------------------------------------------------------------------------- */
+/* Theme sub-schema (shared with FormVersion)                                  */
+/* -------------------------------------------------------------------------- */
+
+const themeBackgroundImageSchema = new Schema<IThemeBackgroundImage>(
+  {
+    url: { type: String, default: "" },
+    fileId: { type: String, default: "" },
+    alt: { type: String, default: "" },
+    brightness: {
+      type: Number,
+      min: THEME_BRIGHTNESS_MIN,
+      max: THEME_BRIGHTNESS_MAX,
+      default: DEFAULT_THEME_BRIGHTNESS,
+    },
+    tile: { type: Boolean, default: false },
+  },
+  subDoc
+);
+
+const themeFontSchema = new Schema<IThemeFont>(
+  {
+    family: { type: String, default: DEFAULT_THEME_FONT.family },
+    source: {
+      type: String,
+      enum: themeFontSources,
+      default: DEFAULT_THEME_FONT.source,
+    },
+    url: { type: String, default: "" },
+  },
+  subDoc
+);
+
+/**
+ * Exported so `FormVersion` snapshots share the exact same shape and defaults
+ * as the live `Form` document.
+ */
+export const formThemeSchema = new Schema<IFormTheme>(
+  {
+    primaryColor: { type: String, default: DEFAULT_PRIMARY_COLOR },
+    backgroundColor: { type: String, default: DEFAULT_BACKGROUND_COLOR },
+    textColor: { type: String, default: DEFAULT_TEXT_COLOR },
+    questionColor: { type: String, default: DEFAULT_QUESTION_COLOR },
+    answerColor: { type: String, default: DEFAULT_ANSWER_COLOR },
+    buttonColor: { type: String, default: DEFAULT_BUTTON_COLOR },
+    buttonTextColor: { type: String, default: DEFAULT_BUTTON_TEXT_COLOR },
+    alignment: { type: String, enum: contentAlignments, default: DEFAULT_ALIGNMENT },
+    fontSize: { type: String, enum: fontSizes, default: DEFAULT_FONT_SIZE },
+    roundCorners: { type: String, enum: cornerRadii, default: DEFAULT_CORNER_RADIUS },
+    // Stays undefined until a background image is chosen.
+    backgroundImage: { type: themeBackgroundImageSchema, default: undefined },
+    font: { type: themeFontSchema, default: () => ({ ...DEFAULT_THEME_FONT }) },
   },
   subDoc
 );
@@ -462,11 +586,7 @@ const formSchema = new Schema<IForm>(
     publishedVersionId: { type: Schema.Types.ObjectId, ref: "FormVersion", default: null },
     hasUnpublishedChanges: { type: Boolean, default: false },
 
-    theme: {
-      primaryColor: { type: String, default: "#000000" },
-      backgroundColor: { type: String, default: "#ffffff" },
-      textColor: { type: String, default: "#111111" },
-    },
+    theme: { type: formThemeSchema, default: () => ({}) },
 
     settings: {
       oneQuestionAtATime: { type: Boolean, default: true },

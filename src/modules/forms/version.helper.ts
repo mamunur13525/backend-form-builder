@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Form, IForm } from "../../models/Form";
 import { FormVersion, IFormVersion } from "../../models/FormVersion";
 import { formStatus } from "../../constants/status";
+import { buildFormTheme } from "./form.theme";
 
 export const createInitialVersion = async (
   formId: mongoose.Types.ObjectId | string,
@@ -24,11 +25,7 @@ export const createInitialVersion = async (
         requireLogin: false,
         collectIP: false,
       },
-      theme: initialData?.theme || {
-        primaryColor: "#000000",
-        backgroundColor: "#ffffff",
-        textColor: "#111111",
-      },
+      theme: buildFormTheme(initialData?.theme),
     },
     createdBy,
   });

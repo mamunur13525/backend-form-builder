@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { IFormField } from "./Form";
+import { formThemeSchema, IFormField, IFormTheme } from "./Form";
 import { IUser } from "./User";
 
 export interface IFormVersionSchema {
@@ -11,11 +11,7 @@ export interface IFormVersionSchema {
     requireLogin: boolean;
     collectIP: boolean;
   };
-  theme: {
-    primaryColor: string;
-    backgroundColor: string;
-    textColor: string;
-  };
+  theme: IFormTheme;
 }
 
 export interface IFormVersion extends Omit<Document, "formSchema"> {
@@ -39,11 +35,7 @@ const formVersionSchema = new Schema<IFormVersion>(
         requireLogin: { type: Boolean, default: false },
         collectIP: { type: Boolean, default: false },
       },
-      theme: {
-        primaryColor: { type: String, default: "#000000" },
-        backgroundColor: { type: String, default: "#ffffff" },
-        textColor: { type: String, default: "#111111" },
-      },
+      theme: { type: formThemeSchema, default: () => ({}) },
     },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },

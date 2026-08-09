@@ -11,6 +11,7 @@ import {
   formStatus,
   isClosedFormStatus,
 } from "../../constants/status";
+import { buildFormTheme } from "../forms/form.theme";
 
 const buildFormLookupQuery = (slugOrId: string) => {
   if (mongoose.Types.ObjectId.isValid(slugOrId)) {
@@ -78,7 +79,7 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
     formVersionId: version._id,
     version: version.version,
     fields: version.formSchema.fields,
-    theme: version.formSchema.theme,
+    theme: buildFormTheme(version.formSchema.theme),
     settings: {
       oneQuestionAtATime: version.formSchema.settings?.oneQuestionAtATime,
       showProgressBar: version.formSchema.settings?.showProgressBar,
@@ -115,7 +116,7 @@ export const getFormTheme = async (slugOrId: string): Promise<any> => {
 
   return {
     title: form.title,
-    theme: version.formSchema.theme,
+    theme: buildFormTheme(version.formSchema.theme),
   };
 };
 
@@ -144,7 +145,7 @@ export const getFormPreview = async (slugOrId: string): Promise<any> => {
   return {
     form: {
       ...form,
-      theme,
+      theme: buildFormTheme(theme),
       settings,
     },
     fields,

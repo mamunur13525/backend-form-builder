@@ -1,4 +1,11 @@
 import { FormStatus } from "../../constants/status";
+import { IFormTheme } from "../../models/Form";
+import {
+  ContentAlignment,
+  CornerRadius,
+  FontSize,
+  ThemeFontSource,
+} from "../../constants/theme";
 
 export interface CreateFormBody {
   title: string;
@@ -16,10 +23,34 @@ export interface UpdateFormSettingsBody {
   collectIP?: boolean;
 }
 
+export interface ThemeBackgroundImageBody {
+  url?: string;
+  fileId?: string;
+  alt?: string;
+  brightness?: number;
+  tile?: boolean;
+}
+
+export interface ThemeFontBody {
+  family?: string;
+  source?: ThemeFontSource;
+  url?: string;
+}
+
 export interface UpdateFormThemeBody {
   primaryColor?: string;
   backgroundColor?: string;
   textColor?: string;
+  questionColor?: string;
+  answerColor?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
+  alignment?: ContentAlignment;
+  fontSize?: FontSize;
+  roundCorners?: CornerRadius;
+  /** `null` removes the background image and its brightness/tile options. */
+  backgroundImage?: ThemeBackgroundImageBody | null;
+  font?: ThemeFontBody;
 }
 
 export interface UpdateFormShareBody {
@@ -37,11 +68,7 @@ export interface FormResponse {
   publishedVersionId?: string | null;
   hasUnpublishedChanges?: boolean;
   version?: number;
-  theme: {
-    primaryColor: string;
-    backgroundColor: string;
-    textColor: string;
-  };
+  theme: IFormTheme;
   settings: {
     oneQuestionAtATime: boolean;
     showProgressBar: boolean;
