@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
-  addressFieldKeys,
+  addressPageKeys,
   allowedFileTypeValues,
   countryCodeModes,
   embedProviders,
-  fieldTypes,
+  pageTypes,
   logicActions,
   logicOperators,
   MAX_MATRIX_COLUMNS,
@@ -16,9 +16,9 @@ import {
   SCALE_LOWER_BOUND,
   SCALE_UPPER_BOUND,
   selectionLimitModes,
-} from "../../constants/fieldTypes";
+} from "../../constants/pageTypes";
 
-const fieldTypeEnum = z.enum(fieldTypes);
+const pageTypeEnum = z.enum(pageTypes);
 
 const optionSchema = z.object({
   label: z.string().optional(),
@@ -90,8 +90,8 @@ const selectionLimitSchema = z
     { message: "min cannot be greater than max", path: ["min"] }
   );
 
-const addressSubFieldSchema = z.object({
-  key: z.enum(addressFieldKeys),
+const addressSubPageSchema = z.object({
+  key: z.enum(addressPageKeys),
   label: z.string().max(200),
   placeholder: z.string().max(200).optional(),
   required: z.boolean().optional(),
@@ -158,7 +158,7 @@ const settingsSchema = z
 
     address: z
       .object({
-        fields: z.array(addressSubFieldSchema).max(addressFieldKeys.length).optional(),
+        pages: z.array(addressSubPageSchema).max(addressPageKeys.length).optional(),
       })
       .optional(),
 
@@ -209,10 +209,10 @@ const appearanceSchema = z.object({
   submitButtonColor: z.string().optional(),
 });
 
-export const createFieldSchema = {
+export const createPageSchema = {
   body: z
     .object({
-      type: fieldTypeEnum,
+      type: pageTypeEnum,
       label: z.string().max(500),
       helperText: z.string().max(500).optional(),
       placeholder: z.string().max(200).optional(),
@@ -223,15 +223,15 @@ export const createFieldSchema = {
       settings: settingsSchema.optional(),
       appearance: appearanceSchema.optional(),
     })
-    .strict(), // Prevent additional fields like 'order' from being passed
+    .strict(), // Prevent additional pages like 'order' from being passed
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),
   }),
 };
 
-export const updateFieldSchema = {
+export const updatePageSchema = {
   body: z.object({
-    type: fieldTypeEnum.optional(),
+    type: pageTypeEnum.optional(),
     label: z.string().max(500).optional(),
     helperText: z.string().max(500).optional(),
     placeholder: z.string().max(200).optional(),
@@ -244,47 +244,47 @@ export const updateFieldSchema = {
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),
-    fieldId: z.string().min(1, "Field ID is required"),
+    pageId: z.string().min(1, "Page ID is required"),
   }),
 };
 
-export const reorderFieldsSchema = {
+export const reorderPagesSchema = {
   body: z.object({
-    fieldIds: z.array(z.string()).min(1, "At least one field ID is required"),
+    pageIds: z.array(z.string()).min(1, "At least one page ID is required"),
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),
   }),
 };
 
-export const fieldLogicSchema = {
+export const pageLogicSchema = {
   body: z.object({
     logic: z.array(
       z.object({
-        whenFieldKey: z.string().optional(),
+        whenPageKey: z.string().optional(),
         operator: z.enum(logicOperators).optional(),
         value: z.any().optional(),
         action: z.enum(logicActions).optional(),
-        targetFieldKey: z.string().optional(),
+        targetPageKey: z.string().optional(),
       })
     ),
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),
-    fieldId: z.string().min(1, "Field ID is required"),
+    pageId: z.string().min(1, "Page ID is required"),
   }),
 };
 
-export const fieldIdParamSchema = {
+export const pageIdParamSchema = {
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),
-    fieldId: z.string().min(1, "Field ID is required"),
+    pageId: z.string().min(1, "Page ID is required"),
   }),
 };
 
-export const deleteFieldLogicSchema = {
+export const deletePageLogicSchema = {
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),
-    fieldId: z.string().min(1, "Field ID is required"),
+    pageId: z.string().min(1, "Page ID is required"),
   }),
 };

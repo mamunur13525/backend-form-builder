@@ -78,7 +78,8 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
     status: form.status,
     formVersionId: version._id,
     version: version.version,
-    fields: version.formSchema.fields,
+    pages: version.formSchema.pages,
+    endPages: version.formSchema.endPages || [],
     theme: buildFormTheme(version.formSchema.theme),
     settings: {
       oneQuestionAtATime: version.formSchema.settings?.oneQuestionAtATime,
@@ -94,10 +95,14 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
 export const getFormSchema = async (slugOrId: string): Promise<any> => {
   const { form, version } = await findPublicFormWithVersion(slugOrId);
 
-  const fields = (version.formSchema.fields || [])
+  const pages = (version.formSchema.pages || [])
     .filter((f: any) => f.isActive)
     .sort((a: any, b: any) => a.order - b.order)
     .map(({ logic, ...rest }: any) => rest);
+
+  const endPages = (version.formSchema.endPages || [])
+    .filter((ep: any) => ep.isActive)
+    .sort((a: any, b: any) => a.order - b.order);
 
   return {
     form: {
@@ -107,7 +112,8 @@ export const getFormSchema = async (slugOrId: string): Promise<any> => {
       formVersionId: version._id,
       settings: version.formSchema.settings,
     },
-    fields,
+    pages,
+    endPages,
   };
 };
 
@@ -127,15 +133,19 @@ export const getFormPreview = async (slugOrId: string): Promise<any> => {
   }
 
   let versionId = form.publishedVersionId || form.draftVersionId;
-  let fields: any[] = [];
+  let pages: any[] = [];
+  let endPages: any[] = form.endPages || [];
   let theme = form.theme;
   let settings = form.settings;
 
   if (versionId) {
     const version = await FormVersion.findById(versionId).lean();
     if (version) {
-      fields = (version.formSchema.fields || [])
+      pages = (version.formSchema.pages || [])
         .filter((f: any) => f.isActive)
+        .sort((a: any, b: any) => a.order - b.order);
+      endPages = (version.formSchema.endPages || [])
+        .filter((ep: any) => ep.isActive)
         .sort((a: any, b: any) => a.order - b.order);
       theme = version.formSchema.theme;
       settings = version.formSchema.settings;
@@ -148,7 +158,8 @@ export const getFormPreview = async (slugOrId: string): Promise<any> => {
       theme: buildFormTheme(theme),
       settings,
     },
-    fields,
+    pages,
+    endPages,
   };
 };
 

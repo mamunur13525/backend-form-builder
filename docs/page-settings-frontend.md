@@ -1,22 +1,22 @@
-# Field Settings & New Field Types — Frontend Guide
+# Page Settings & New Page Types — Frontend Guide
 
-Companion to `docs/form-fields-api.md`. Covers only what changed: the new field types, the new `coverImage` property, and the new per-type `settings` object.
+Companion to `docs/form-pages-api.md`. Covers only what changed: the new page types, the new `coverImage` property, and the new per-type `settings` object.
 
 **Endpoints are unchanged.** Everything below is sent/received through the existing routes:
 
-- `POST /forms/:formId/fields`
-- `PATCH /forms/:formId/fields/:fieldId`
+- `POST /forms/:formId/pages`
+- `PATCH /forms/:formId/pages/:pageId`
 
 ---
 
-## 1. What's new on every field
+## 1. What's new on every page
 
-Two new properties exist on all field objects:
+Two new properties exist on all page objects:
 
 ```jsonc
 {
   "coverImage": { "url": "https://…/cover.png", "fileId": "abc123", "alt": "" },
-  "settings": { /* only the group for this field's type — see §3 */ }
+  "settings": { /* only the group for this page's type — see §3 */ }
 }
 ```
 
@@ -28,11 +28,11 @@ Two new properties exist on all field objects:
 | `"coverImage": null` | **Clears** the image |
 | key omitted | Left unchanged |
 
-**`settings`** — a namespaced object. Only the group belonging to the field's type is stored; everything else is stripped server-side.
+**`settings`** — a namespaced object. Only the group belonging to the page's type is stored; everything else is stripped server-side.
 
 ---
 
-## 2. Field types
+## 2. Page types
 
 ```
 shortText  longText  email  phone  number  date  time
@@ -49,7 +49,7 @@ Types with **no** settings group (only `required` + `coverImage`): `shortText`, 
 
 ---
 
-## 3. Settings by field type
+## 3. Settings by page type
 
 The group name is **not** the type name — `select`, `multiSelect`, `radio` and `checkbox` all share the `choice` group.
 
@@ -118,7 +118,7 @@ Statement is display-only. Use the existing **`label`** for the heading and **`h
 {
   "settings": {
     "address": {
-      "fields": [
+      "pages": [
         { "key": "address1", "label": "Address",        "placeholder": "", "required": false, "hidden": false, "order": 1 },
         { "key": "address2", "label": "Address line 2", "placeholder": "", "required": false, "hidden": false, "order": 2 },
         { "key": "city",     "label": "City",           "placeholder": "", "required": false, "hidden": false, "order": 3 },
@@ -130,7 +130,7 @@ Statement is display-only. Use the existing **`label`** for the heading and **`h
   }
 }
 ```
-These six are seeded automatically when the field is created. The admin can rename `label`, change `placeholder`, toggle `required` and `hidden`. `key` is fixed — don't invent new ones.
+These six are seeded automatically when the page is created. The admin can rename `label`, change `placeholder`, toggle `required` and `hidden`. `key` is fixed — don't invent new ones.
 
 ### rating
 ```json
@@ -197,13 +197,13 @@ Send **`null`** for "no limit" (the blank input state). `minLength <= maxLength`
 
 1. **Send only the group that matches the type.** Unknown keys in `settings` are rejected (`.strict()`); irrelevant groups are dropped.
 
-2. **Changing a field's `type` wipes its settings.** The server rebuilds them from the new type's defaults. If the user switches `rating` → `file`, the old `{ style, max }` is gone — re-render the panel from the response, don't reuse local state.
+2. **Changing a page's `type` wipes its settings.** The server rebuilds them from the new type's defaults. If the user switches `rating` → `file`, the old `{ style, max }` is gone — re-render the panel from the response, don't reuse local state.
 
-3. **Defaults are applied on create.** `POST` a field with no `settings` and the response comes back fully populated (address gets its six rows, upload gets `maxFileSizeMb: 10`, etc.). Use the response to hydrate the settings panel.
+3. **Defaults are applied on create.** `POST` a page with no `settings` and the response comes back fully populated (address gets its six rows, upload gets `maxFileSizeMb: 10`, etc.). Use the response to hydrate the settings panel.
 
 4. **Partial updates merge.** `PATCH` with `{ "settings": { "choice": { "hideLabels": true } } }` keeps the other `choice` values intact.
 
-5. **Duplicating a field copies settings and cover image.**
+5. **Duplicating a page copies settings and cover image.**
 
 ---
 

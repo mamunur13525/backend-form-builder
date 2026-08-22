@@ -131,7 +131,7 @@ If not needed, hard delete is simpler.
 Example:
 
 create form
-create fields
+create pages
 save share info
 
 If one step fails, rollback with MongoDB session.
@@ -154,7 +154,7 @@ For your form builder, this is a clean module split
 auth → login, register, token
 users → user profile, roles
 forms → create/update/publish form
-fields → add/reorder form fields
+pages → add/reorder form pages
 responses → collect and read submissions
 public-form → public form view and submit API
 Mongoose-specific rules
@@ -180,4 +180,4 @@ frontend payload
 
 That order catches most bugs fast.
 
-I can also make a ready-to-use folder structure for your form builder project with exact files for auth, forms, fields, and responses in TypeScript + Mongoose.
+I can also make a ready-to-use folder structure for your form builder project with exact files for auth, forms, pages, and responses in TypeScript + Mongoose.

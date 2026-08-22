@@ -45,7 +45,7 @@ describe("Closed form lifecycle (unpublished / cancelled)", () => {
     slug = createRes.body.data.slug;
 
     await api
-      .post(`/api/v1/forms/${formId}/fields`)
+      .post(`/api/v1/forms/${formId}/pages`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ type: "shortText", label: "Your Name", required: true });
 
@@ -142,11 +142,11 @@ describe("Closed form lifecycle (unpublished / cancelled)", () => {
     await publishFreshForm();
 
     const schemaRes = await api.get(`/api/v1/public/forms/${slug}/schema`);
-    const fieldKey = schemaRes.body.data.fields[0].fieldKey;
+    const pageKey = schemaRes.body.data.pages[0].pageKey;
 
     const subRes = await api.post(`/api/v1/public/forms/${slug}/submit`).send({
       answers: [
-        { fieldKey, label: "Your Name", type: "shortText", value: "Alice" },
+        { pageKey, label: "Your Name", type: "shortText", value: "Alice" },
       ],
     });
     expect(subRes.status).toBe(200);
@@ -180,6 +180,6 @@ describe("Closed form lifecycle (unpublished / cancelled)", () => {
 
     const pubRes = await api.get(`/f/${slug}`);
     expect(pubRes.status).toBe(200);
-    expect(pubRes.body.data.fields).toHaveLength(1);
+    expect(pubRes.body.data.pages).toHaveLength(1);
   });
 });

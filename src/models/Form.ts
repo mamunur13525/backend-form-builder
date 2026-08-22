@@ -2,10 +2,10 @@ import mongoose, { Schema, Document } from "mongoose";
 import { IUser } from "./User";
 import { FormStatus, formStatus, formStatusValues } from "../constants/status";
 import {
-  addressFieldKeys,
+  addressPageKeys,
   allowedFileTypeValues,
   countryCodeModes,
-  defaultAddressFields,
+  defaultAddressPages,
   DEFAULT_MAX_UPLOAD_SIZE_MB,
   DEFAULT_OPTIONS_PER_ROW_DESKTOP,
   DEFAULT_OPTIONS_PER_ROW_MOBILE,
@@ -14,13 +14,13 @@ import {
   DEFAULT_SCALE_MAX,
   DEFAULT_SCALE_MIN,
   embedProviders,
-  fieldTypes,
-  FieldType,
+  pageTypes,
+  PageType,
   logicActions,
   logicOperators,
   ratingStyles,
   selectionLimitModes,
-} from "../constants/fieldTypes";
+} from "../constants/pageTypes";
 import {
   contentAlignments,
   ContentAlignment,
@@ -50,14 +50,14 @@ import {
 /* Shared pieces                                                              */
 /* -------------------------------------------------------------------------- */
 
-/** Cover image is available on every field type. */
+/** Cover image is available on every page type. */
 export interface ICoverImage {
   url: string;
   fileId?: string;
   alt?: string;
 }
 
-export interface IFieldOption {
+export interface IPageOption {
   label?: string;
   value?: string;
 }
@@ -88,8 +88,8 @@ export interface IThemeFont {
 }
 
 /**
- * Styles the whole form, every page included. Per-field overrides live in
- * `IFormField.appearance`.
+ * Styles the whole form, every page included. Per-page overrides live in
+ * `IFormPage.appearance`.
  */
 export interface IFormTheme {
   primaryColor: string;
@@ -114,14 +114,14 @@ export interface IFormTheme {
 /* Per-type settings                                                          */
 /* -------------------------------------------------------------------------- */
 
-export interface IEmailFieldSettings {
+export interface IEmailPageSettings {
   /** Reject free/consumer mail providers (gmail.com, yahoo.com, ...). */
   businessEmailsOnly: boolean;
   /** Send a verification code to the address before accepting the answer. */
   emailVerification: boolean;
 }
 
-export interface IPhoneFieldSettings {
+export interface IPhonePageSettings {
   /** Sends an SMS code to verify the respondent's phone number. */
   phoneVerification: boolean;
   /** `auto` resolves the dial code from the respondent's country. */
@@ -134,14 +134,14 @@ export interface IPhoneFieldSettings {
   };
 }
 
-export interface IStatementFieldSettings {
+export interface IStatementPageSettings {
   /** Any embeddable link: YouTube, Loom, Vimeo, PDF, ... */
   embedUrl: string;
   embedProvider?: (typeof embedProviders)[number];
   embedTitle?: string;
 }
 
-export interface IChoiceFieldSettings {
+export interface IChoicePageSettings {
   /** Adds an extra "Other" choice with a free-text input. */
   allowOther: boolean;
   otherLabel: string;
@@ -161,8 +161,8 @@ export interface IChoiceFieldSettings {
   };
 }
 
-export interface IAddressSubField {
-  key: (typeof addressFieldKeys)[number];
+export interface IAddressSubPage {
+  key: (typeof addressPageKeys)[number];
   label: string;
   placeholder: string;
   required: boolean;
@@ -170,25 +170,25 @@ export interface IAddressSubField {
   order: number;
 }
 
-export interface IAddressFieldSettings {
-  fields: IAddressSubField[];
+export interface IAddressPageSettings {
+  pages: IAddressSubPage[];
 }
 
-export interface IRatingFieldSettings {
+export interface IRatingPageSettings {
   /** `star` renders stars, `number` renders a numeric range. */
   style: "star" | "number";
   /** Highest selectable rating. */
   max: number;
 }
 
-export interface IOpinionScaleFieldSettings {
+export interface IOpinionScalePageSettings {
   min: number;
   max: number;
   leftLabel: string;
   rightLabel: string;
 }
 
-export interface IUploadFieldSettings {
+export interface IUploadPageSettings {
   allowMultiple: boolean;
   /** Group shorthands ("image") or concrete MIME types ("image/png"). */
   allowedFileTypes: string[];
@@ -201,39 +201,39 @@ export interface IMatrixEntry {
   order: number;
 }
 
-export interface IMatrixFieldSettings {
+export interface IMatrixPageSettings {
   rows: IMatrixEntry[];
   columns: IMatrixEntry[];
   /** Allow multiple selections per row. */
   allowMultiplePerRow: boolean;
 }
 
-export interface IFieldSettings {
-  email?: IEmailFieldSettings;
-  phone?: IPhoneFieldSettings;
-  statement?: IStatementFieldSettings;
-  choice?: IChoiceFieldSettings;
-  address?: IAddressFieldSettings;
-  rating?: IRatingFieldSettings;
-  opinionScale?: IOpinionScaleFieldSettings;
-  upload?: IUploadFieldSettings;
-  matrix?: IMatrixFieldSettings;
+export interface IPageSettings {
+  email?: IEmailPageSettings;
+  phone?: IPhonePageSettings;
+  statement?: IStatementPageSettings;
+  choice?: IChoicePageSettings;
+  address?: IAddressPageSettings;
+  rating?: IRatingPageSettings;
+  opinionScale?: IOpinionScalePageSettings;
+  upload?: IUploadPageSettings;
+  matrix?: IMatrixPageSettings;
 }
 
 /* -------------------------------------------------------------------------- */
-/* Field                                                                      */
+/* Page                                                                      */
 /* -------------------------------------------------------------------------- */
 
-export interface IFormField {
-  fieldKey: string;
+export interface IFormPage {
+  pageKey: string;
   label: string;
   helperText: string;
   placeholder: string;
-  type: FieldType;
+  type: PageType;
   required: boolean;
   order: number;
   coverImage?: ICoverImage;
-  options: IFieldOption[];
+  options: IPageOption[];
   validation: {
     /** longText: minimum characters. Blank means no limit. */
     minLength?: number;
@@ -246,13 +246,13 @@ export interface IFormField {
     pattern?: string;
     message?: string;
   };
-  settings: IFieldSettings;
+  settings: IPageSettings;
   logic: {
-    whenFieldKey?: string;
+    whenPageKey?: string;
     operator?: "equals" | "notEquals" | "contains" | "greaterThan" | "lessThan";
     value?: any;
-    action?: "show" | "hide" | "goToField" | "goToEnd";
-    targetFieldKey?: string;
+    action?: "show" | "hide" | "goToPage" | "goToEnd";
+    targetPageKey?: string;
   }[];
   appearance: {
     width: "full" | "half";
@@ -263,6 +263,53 @@ export interface IFormField {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/* -------------------------------------------------------------------------- */
+/* End page                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export interface IEndPageEmbed {
+  url: string;
+  provider?: (typeof embedProviders)[number];
+  title?: string;
+}
+
+export interface IEndPageButton {
+  text: string;
+  link: string;
+}
+
+export interface IEndPageRedirect {
+  isRedirect: boolean;
+  link: string;
+}
+
+export interface IEndPageSocialShareMedia {
+  facebook: boolean;
+  twitter: boolean;
+  linkedin: boolean;
+  whatsapp?: boolean;
+}
+
+export interface IEndPage {
+  _id?: mongoose.Types.ObjectId | string;
+  key?: string;
+  title: string;
+  paragraph?: string;
+  coverImage?: ICoverImage;
+  embed?: IEndPageEmbed;
+  alignment: ContentAlignment;
+  button: IEndPageButton;
+  redirect: IEndPageRedirect;
+  showConfetti: boolean;
+  socialShareButtons: boolean;
+  socialShareMessage: string;
+  socialShareMedia: IEndPageSocialShareMedia;
+  isActive: boolean;
+  order: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IForm extends Document {
@@ -280,7 +327,8 @@ export interface IForm extends Document {
     requireLogin: boolean;
     collectIP: boolean;
   };
-  fields: IFormField[];
+  pages: IFormPage[];
+  endPages: IEndPage[];
   createdBy: IUser["_id"];
   updatedBy?: IUser["_id"];
   createdAt: Date;
@@ -358,7 +406,7 @@ export const formThemeSchema = new Schema<IFormTheme>(
   subDoc
 );
 
-const emailSettingsSchema = new Schema<IEmailFieldSettings>(
+const emailSettingsSchema = new Schema<IEmailPageSettings>(
   {
     businessEmailsOnly: { type: Boolean, default: false },
     emailVerification: { type: Boolean, default: false },
@@ -366,7 +414,7 @@ const emailSettingsSchema = new Schema<IEmailFieldSettings>(
   subDoc
 );
 
-const phoneSettingsSchema = new Schema<IPhoneFieldSettings>(
+const phoneSettingsSchema = new Schema<IPhonePageSettings>(
   {
     phoneVerification: { type: Boolean, default: false },
     countryCodeMode: {
@@ -383,7 +431,7 @@ const phoneSettingsSchema = new Schema<IPhoneFieldSettings>(
   subDoc
 );
 
-const statementSettingsSchema = new Schema<IStatementFieldSettings>(
+const statementSettingsSchema = new Schema<IStatementPageSettings>(
   {
     embedUrl: { type: String, default: "" },
     embedProvider: { type: String, enum: embedProviders },
@@ -392,7 +440,7 @@ const statementSettingsSchema = new Schema<IStatementFieldSettings>(
   subDoc
 );
 
-const choiceSettingsSchema = new Schema<IChoiceFieldSettings>(
+const choiceSettingsSchema = new Schema<IChoicePageSettings>(
   {
     allowOther: { type: Boolean, default: false },
     otherLabel: { type: String, default: "Other" },
@@ -412,9 +460,9 @@ const choiceSettingsSchema = new Schema<IChoiceFieldSettings>(
   subDoc
 );
 
-const addressSubFieldSchema = new Schema<IAddressSubField>(
+const addressSubPageSchema = new Schema<IAddressSubPage>(
   {
-    key: { type: String, enum: addressFieldKeys, required: true },
+    key: { type: String, enum: addressPageKeys, required: true },
     label: { type: String, required: true },
     placeholder: { type: String, default: "" },
     required: { type: Boolean, default: false },
@@ -424,14 +472,14 @@ const addressSubFieldSchema = new Schema<IAddressSubField>(
   subDoc
 );
 
-const addressSettingsSchema = new Schema<IAddressFieldSettings>(
+const addressSettingsSchema = new Schema<IAddressPageSettings>(
   {
-    fields: { type: [addressSubFieldSchema], default: () => defaultAddressFields },
+    pages: { type: [addressSubPageSchema], default: () => defaultAddressPages },
   },
   subDoc
 );
 
-const ratingSettingsSchema = new Schema<IRatingFieldSettings>(
+const ratingSettingsSchema = new Schema<IRatingPageSettings>(
   {
     style: { type: String, enum: ratingStyles, default: DEFAULT_RATING_STYLE },
     max: { type: Number, default: DEFAULT_RATING_MAX },
@@ -439,7 +487,7 @@ const ratingSettingsSchema = new Schema<IRatingFieldSettings>(
   subDoc
 );
 
-const opinionScaleSettingsSchema = new Schema<IOpinionScaleFieldSettings>(
+const opinionScaleSettingsSchema = new Schema<IOpinionScalePageSettings>(
   {
     min: { type: Number, default: DEFAULT_SCALE_MIN },
     max: { type: Number, default: DEFAULT_SCALE_MAX },
@@ -449,7 +497,7 @@ const opinionScaleSettingsSchema = new Schema<IOpinionScaleFieldSettings>(
   subDoc
 );
 
-const uploadSettingsSchema = new Schema<IUploadFieldSettings>(
+const uploadSettingsSchema = new Schema<IUploadPageSettings>(
   {
     allowMultiple: { type: Boolean, default: false },
     allowedFileTypes: {
@@ -475,7 +523,7 @@ const matrixEntrySchema = new Schema<IMatrixEntry>(
   subDoc
 );
 
-const matrixSettingsSchema = new Schema<IMatrixFieldSettings>(
+const matrixSettingsSchema = new Schema<IMatrixPageSettings>(
   {
     rows: { type: [matrixEntrySchema], default: [] },
     columns: { type: [matrixEntrySchema], default: [] },
@@ -485,10 +533,10 @@ const matrixSettingsSchema = new Schema<IMatrixFieldSettings>(
 );
 
 /**
- * Only the group relevant to the field's type is populated; the rest stay
+ * Only the group relevant to the page's type is populated; the rest stay
  * `undefined` so documents don't carry unrelated settings.
  */
-const fieldSettingsSchema = new Schema<IFieldSettings>(
+const pageSettingsSchema = new Schema<IPageSettings>(
   {
     email: { type: emailSettingsSchema, default: undefined },
     phone: { type: phoneSettingsSchema, default: undefined },
@@ -504,19 +552,92 @@ const fieldSettingsSchema = new Schema<IFieldSettings>(
 );
 
 /* -------------------------------------------------------------------------- */
-/* Field + form schemas                                                       */
+/* End page sub-schemas                                                       */
 /* -------------------------------------------------------------------------- */
 
-const formFieldSchema = new Schema<IFormField>(
+const endPageEmbedSchema = new Schema<IEndPageEmbed>(
   {
-    fieldKey: { type: String, required: true },
+    url: { type: String, default: "" },
+    provider: { type: String, enum: embedProviders },
+    title: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const endPageButtonSchema = new Schema<IEndPageButton>(
+  {
+    text: { type: String, default: "" },
+    link: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const endPageRedirectSchema = new Schema<IEndPageRedirect>(
+  {
+    isRedirect: { type: Boolean, default: false },
+    link: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const endPageSocialShareMediaSchema = new Schema<IEndPageSocialShareMedia>(
+  {
+    facebook: { type: Boolean, default: false },
+    twitter: { type: Boolean, default: false },
+    linkedin: { type: Boolean, default: false },
+    whatsapp: { type: Boolean, default: false },
+  },
+  subDoc
+);
+
+export const endPageSchema = new Schema<IEndPage>(
+  {
+    key: { type: String, default: "" },
+    title: { type: String, default: "Thank you!" },
+    paragraph: { type: String, default: "" },
+    coverImage: { type: coverImageSchema, default: undefined },
+    embed: { type: endPageEmbedSchema, default: () => ({ url: "" }) },
+    alignment: { type: String, enum: contentAlignments, default: DEFAULT_ALIGNMENT },
+    button: {
+      type: endPageButtonSchema,
+      default: () => ({ text: "", link: "" }),
+    },
+    redirect: {
+      type: endPageRedirectSchema,
+      default: () => ({ isRedirect: false, link: "" }),
+    },
+    showConfetti: { type: Boolean, default: false },
+    socialShareButtons: { type: Boolean, default: false },
+    socialShareMessage: { type: String, default: "" },
+    socialShareMedia: {
+      type: endPageSocialShareMediaSchema,
+      default: () => ({
+        facebook: false,
+        twitter: false,
+        linkedin: false,
+        whatsapp: false,
+      }),
+    },
+    isActive: { type: Boolean, default: true },
+    order: { type: Number, default: 1 },
+  },
+  { timestamps: true }
+);
+
+/* -------------------------------------------------------------------------- */
+/* Page + form schemas                                                       */
+/* -------------------------------------------------------------------------- */
+
+const formPageSchema = new Schema<IFormPage>(
+  {
+    pageKey: { type: String, required: true },
     label: { type: String, required: true },
     helperText: { type: String, default: "" },
     placeholder: { type: String, default: "" },
 
     type: {
       type: String,
-      enum: fieldTypes,
+      enum: pageTypes,
       required: true,
     },
 
@@ -541,11 +662,11 @@ const formFieldSchema = new Schema<IFormField>(
       message: { type: String },
     },
 
-    settings: { type: fieldSettingsSchema, default: () => ({}) },
+    settings: { type: pageSettingsSchema, default: () => ({}) },
 
     logic: [
       {
-        whenFieldKey: { type: String },
+        whenPageKey: { type: String },
         operator: {
           type: String,
           enum: logicOperators,
@@ -555,7 +676,7 @@ const formFieldSchema = new Schema<IFormField>(
           type: String,
           enum: logicActions,
         },
-        targetFieldKey: { type: String },
+        targetPageKey: { type: String },
       },
     ],
 
@@ -596,7 +717,8 @@ const formSchema = new Schema<IForm>(
       collectIP: { type: Boolean, default: false },
     },
 
-    fields: [formFieldSchema],
+    pages: [formPageSchema],
+    endPages: [endPageSchema],
 
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },

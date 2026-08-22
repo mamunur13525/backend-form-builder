@@ -4,14 +4,14 @@ export const createLogicSchema = {
   body: z.object({
     conditions: z.array(
       z.object({
-        fieldKey: z.string().min(1),
+        pageKey: z.string().min(1),
         operator: z.enum(["equals", "notEquals", "contains", "greaterThan", "lessThan"]),
         value: z.any(),
       })
     ),
     actions: z.array(
       z.object({
-        action: z.enum(["show", "hide", "goToField", "goToEnd", "skipTo"]),
+        action: z.enum(["show", "hide", "goToPage", "goToEnd", "skipTo"]),
         target: z.string().optional(),
       })
     ),
@@ -26,7 +26,7 @@ export const updateLogicSchema = {
     conditions: z
       .array(
         z.object({
-          fieldKey: z.string().min(1),
+          pageKey: z.string().min(1),
           operator: z.enum(["equals", "notEquals", "contains", "greaterThan", "lessThan"]),
           value: z.any(),
         })
@@ -35,7 +35,7 @@ export const updateLogicSchema = {
     actions: z
       .array(
         z.object({
-          action: z.enum(["show", "hide", "goToField", "goToEnd", "skipTo"]),
+          action: z.enum(["show", "hide", "goToPage", "goToEnd", "skipTo"]),
           target: z.string().optional(),
         })
       )

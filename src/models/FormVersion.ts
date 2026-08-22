@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { formThemeSchema, IFormField, IFormTheme } from "./Form";
+import { formThemeSchema, IEndPage, IFormPage, IFormTheme } from "./Form";
 import { IUser } from "./User";
 
 export interface IFormVersionSchema {
-  fields: IFormField[];
+  pages: IFormPage[];
+  endPages?: IEndPage[];
   settings: {
     oneQuestionAtATime: boolean;
     showProgressBar: boolean;
@@ -27,7 +28,8 @@ const formVersionSchema = new Schema<IFormVersion>(
     formId: { type: Schema.Types.ObjectId, ref: "Form", required: true, index: true },
     version: { type: Number, required: true },
     formSchema: {
-      fields: { type: Array, default: [] },
+      pages: { type: Array, default: [] },
+      endPages: { type: Array, default: [] },
       settings: {
         oneQuestionAtATime: { type: Boolean, default: true },
         showProgressBar: { type: Boolean, default: true },

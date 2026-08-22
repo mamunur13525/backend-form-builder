@@ -1,5 +1,5 @@
 import { FormStatus } from "../../constants/status";
-import { IFormTheme } from "../../models/Form";
+import { IEndPage, IFormTheme } from "../../models/Form";
 import {
   ContentAlignment,
   CornerRadius,
@@ -76,7 +76,8 @@ export interface FormResponse {
     requireLogin: boolean;
     collectIP: boolean;
   };
-  fields: {}[];
+  pages: {}[];
+  endPages?: IEndPage[];
   createdBy: string;
   updatedBy?: string;
   createdAt: Date;

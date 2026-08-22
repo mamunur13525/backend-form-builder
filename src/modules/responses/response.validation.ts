@@ -12,7 +12,7 @@ export const updateResponseSchema = {
     answers: z
       .array(
         z.object({
-          fieldKey: z.string().min(1),
+          pageKey: z.string().min(1),
           label: z.string(),
           type: z.string().min(1),
           value: z.any(),

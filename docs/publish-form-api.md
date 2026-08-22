@@ -151,9 +151,9 @@ Returns the live published form schema. Returns `404` if the form is unpublished
     "status": "published",
     "formVersionId": "60d5ec49f1b2c80015b6d456",
     "version": 1,
-    "fields": [
+    "pages": [
       {
-        "fieldKey": "field_a1b2c3d4",
+        "pageKey": "page_a1b2c3d4",
         "label": "Your Name",
         "type": "shortText",
         "required": true,
@@ -185,7 +185,7 @@ Submits respondent answers against the exact published version ID.
 {
   "answers": [
     {
-      "fieldKey": "field_a1b2c3d4",
+      "pageKey": "page_a1b2c3d4",
       "label": "Your Name",
       "type": "shortText",
       "value": "Alice"

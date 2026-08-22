@@ -8,7 +8,7 @@ export interface IFormResponse extends Document {
   respondentId?: IUser["_id"];
   sessionId: string;
   answers: {
-    fieldKey: string;
+    pageKey: string;
     label: string;
     type: string;
     value: any;
@@ -35,7 +35,7 @@ const formResponseSchema = new Schema<IFormResponse>(
 
     answers: [
       {
-        fieldKey: { type: String, required: true },
+        pageKey: { type: String, required: true },
         label: { type: String, required: true },
         type: { type: String, required: true },
         value: { type: Schema.Types.Mixed, required: true },

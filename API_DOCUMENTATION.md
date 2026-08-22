@@ -799,14 +799,14 @@ Update form share settings.
 
 ---
 
-## Form Fields Endpoints
+## Form Pages Endpoints
 
-**Architecture Note:** Form fields are now **embedded subdocuments** inside the Form document. They are NOT stored in a separate collection. All field operations use MongoDB's array update operators (`$push`, `$pull`, positional `$`) directly on the Form document's `fields` array.
+**Architecture Note:** Form pages are now **embedded subdocuments** inside the Form document. They are NOT stored in a separate collection. All page operations use MongoDB's array update operators (`$push`, `$pull`, positional `$`) directly on the Form document's `pages` array.
 
-### POST /forms/:formId/fields
-Create a new field in a form.
+### POST /forms/:formId/pages
+Create a new page in a form.
 
-**How it works:** The field object is pushed into the Form's `fields` array using MongoDB's `$push` operator. The `fieldKey` is auto-generated (e.g., `field_abc12345`), and the `order` is auto-calculated (max existing order + 1).
+**How it works:** The page object is pushed into the Form's `pages` array using MongoDB's `$push` operator. The `pageKey` is auto-generated (e.g., `page_abc12345`), and the `order` is auto-calculated (max existing order + 1).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -830,16 +830,16 @@ Create a new field in a form.
 }
 ```
 
-**Field Types:** `shortText`, `longText`, `email`, `phone`, `number`, `date`, `time`, `radio`, `checkbox`, `select`, `multiSelect`, `file`, `rating`, `yesNo`, `url`
+**Page Types:** `shortText`, `longText`, `email`, `phone`, `number`, `date`, `time`, `radio`, `checkbox`, `select`, `multiSelect`, `file`, `rating`, `yesNo`, `url`
 
 **Response (201):**
 ```json
 {
   "success": true,
-  "message": "Field created successfully",
+  "message": "Page created successfully",
   "data": {
     "_id": "65f1a2b3c4d5e6f7a8b9c0d3",
-    "fieldKey": "field_abc123",
+    "pageKey": "page_abc123",
     "label": "What is your name?",
     "helperText": "Please enter your full name",
     "placeholder": "John Doe",
@@ -857,10 +857,10 @@ Create a new field in a form.
 }
 ```
 
-### GET /forms/:formId/fields
-Get all active fields for a form.
+### GET /forms/:formId/pages
+Get all active pages for a form.
 
-**How it works:** Reads the `fields` array from the Form document and filters by `isActive: true`, sorted by `order`.
+**How it works:** Reads the `pages` array from the Form document and filters by `isActive: true`, sorted by `order`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -868,17 +868,17 @@ Get all active fields for a form.
 ```json
 {
   "success": true,
-  "message": "Fields retrieved successfully",
+  "message": "Pages retrieved successfully",
   "data": [
-    { ...field object... }
+    { ...page object... }
   ]
 }
 ```
 
-### GET /forms/:formId/fields/:fieldId
-Get a specific field by ID or fieldKey.
+### GET /forms/:formId/pages/:pageId
+Get a specific page by ID or pageKey.
 
-**How it works:** Uses MongoDB's positional projection (`"fields.$": 1`) to return only the matching subdocument from the Form's `fields` array. The `fieldId` can be either the MongoDB `_id` of the embedded field or its `fieldKey` string.
+**How it works:** Uses MongoDB's positional projection (`"pages.$": 1`) to return only the matching subdocument from the Form's `pages` array. The `pageId` can be either the MongoDB `_id` of the embedded page or its `pageKey` string.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -886,15 +886,15 @@ Get a specific field by ID or fieldKey.
 ```json
 {
   "success": true,
-  "message": "Field retrieved successfully",
-  "data": { ...field object... }
+  "message": "Page retrieved successfully",
+  "data": { ...page object... }
 }
 ```
 
-### PATCH /forms/:formId/fields/:fieldId
-Update a field's properties.
+### PATCH /forms/:formId/pages/:pageId
+Update a page's properties.
 
-**How it works:** Uses MongoDB's positional `$` operator to update specific fields of the matched subdocument (e.g., `{ $set: { "fields.$.label": "New label" } }`).
+**How it works:** Uses MongoDB's positional `$` operator to update specific pages of the matched subdocument (e.g., `{ $set: { "pages.$.label": "New label" } }`).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -914,15 +914,15 @@ Update a field's properties.
 ```json
 {
   "success": true,
-  "message": "Field updated successfully",
-  "data": { ...updated field object... }
+  "message": "Page updated successfully",
+  "data": { ...updated page object... }
 }
 ```
 
-### DELETE /forms/:formId/fields/:fieldId
-Delete a field from a form.
+### DELETE /forms/:formId/pages/:pageId
+Delete a page from a form.
 
-**How it works:** Uses MongoDB's `$pull` operator to remove the matching subdocument from the Form's `fields` array by its `_id`.
+**How it works:** Uses MongoDB's `$pull` operator to remove the matching subdocument from the Form's `pages` array by its `_id`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -930,22 +930,22 @@ Delete a field from a form.
 ```json
 {
   "success": true,
-  "message": "Field deleted successfully",
+  "message": "Page deleted successfully",
   "data": null
 }
 ```
 
-### PATCH /forms/:formId/fields/reorder
-Reorder fields in a form.
+### PATCH /forms/:formId/pages/reorder
+Reorder pages in a form.
 
-**How it works:** Iterates over the provided `fieldIds` array and updates each field's `order` value using MongoDB's positional `$` operator. The index in the array determines the new order (1-based).
+**How it works:** Iterates over the provided `pageIds` array and updates each page's `order` value using MongoDB's positional `$` operator. The index in the array determines the new order (1-based).
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Request Body:**
 ```json
 {
-  "fieldIds": ["65f1a2b3c4d5e6f7a8b9c0d4", "65f1a2b3c4d5e6f7a8b9c0d3", "65f1a2b3c4d5e6f7a8b9c0d5"]
+  "pageIds": ["65f1a2b3c4d5e6f7a8b9c0d4", "65f1a2b3c4d5e6f7a8b9c0d3", "65f1a2b3c4d5e6f7a8b9c0d5"]
 }
 ```
 
@@ -953,15 +953,15 @@ Reorder fields in a form.
 ```json
 {
   "success": true,
-  "message": "Fields reordered successfully",
+  "message": "Pages reordered successfully",
   "data": null
 }
 ```
 
-### PATCH /forms/:formId/fields/:fieldId/duplicate
-Duplicate a field.
+### PATCH /forms/:formId/pages/:pageId/duplicate
+Duplicate a page.
 
-**How it works:** Reads the existing field from the Form's `fields` array, creates a copy with a new `fieldKey`, appends "(copy)" to the label, and pushes it as a new subdocument with `$push`.
+**How it works:** Reads the existing page from the Form's `pages` array, creates a copy with a new `pageKey`, appends "(copy)" to the label, and pushes it as a new subdocument with `$push`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -969,15 +969,15 @@ Duplicate a field.
 ```json
 {
   "success": true,
-  "message": "Field duplicated successfully",
-  "data": { ...duplicated field object... }
+  "message": "Page duplicated successfully",
+  "data": { ...duplicated page object... }
 }
 ```
 
-### PATCH /forms/:formId/fields/:fieldId/logic
-Update field logic (conditional logic).
+### PATCH /forms/:formId/pages/:pageId/logic
+Update page logic (conditional logic).
 
-**How it works:** Uses MongoDB's positional `$` operator to update only the `logic` field of the matched subdocument: `{ $set: { "fields.$.logic": [...] } }`.
+**How it works:** Uses MongoDB's positional `$` operator to update only the `logic` page of the matched subdocument: `{ $set: { "pages.$.logic": [...] } }`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -986,11 +986,11 @@ Update field logic (conditional logic).
 {
   "logic": [
     {
-      "whenFieldKey": "field_abc123",
+      "whenPageKey": "page_abc123",
       "operator": "equals",
       "value": "John Doe",
       "action": "show",
-      "targetFieldKey": "field_def456"
+      "targetPageKey": "page_def456"
     }
   ]
 }
@@ -1000,15 +1000,15 @@ Update field logic (conditional logic).
 ```json
 {
   "success": true,
-  "message": "Field logic updated successfully",
-  "data": { ...field object with updated logic... }
+  "message": "Page logic updated successfully",
+  "data": { ...page object with updated logic... }
 }
 ```
 
-### DELETE /forms/:formId/fields/:fieldId/logic
-Delete field logic (set to empty array).
+### DELETE /forms/:formId/pages/:pageId/logic
+Delete page logic (set to empty array).
 
-**How it works:** Uses MongoDB's positional `$` operator to set the `logic` field to an empty array: `{ $set: { "fields.$.logic": [] } }`.
+**How it works:** Uses MongoDB's positional `$` operator to set the `logic` page to an empty array: `{ $set: { "pages.$.logic": [] } }`.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -1016,8 +1016,8 @@ Delete field logic (set to empty array).
 ```json
 {
   "success": true,
-  "message": "Field logic deleted successfully",
-  "data": { ...field object with empty logic... }
+  "message": "Page logic deleted successfully",
+  "data": { ...page object with empty logic... }
 }
 ```
 
@@ -1139,15 +1139,15 @@ Create form-level logic.
 {
   "conditions": [
     {
-      "fieldKey": "field_abc123",
+      "pageKey": "page_abc123",
       "operator": "equals",
       "value": "Yes"
     }
   ],
   "actions": [
     {
-      "action": "goToField",
-      "target": "field_def456"
+      "action": "goToPage",
+      "target": "page_def456"
     }
   ]
 }
@@ -1155,7 +1155,7 @@ Create form-level logic.
 
 **Operators:** `equals`, `notEquals`, `contains`, `greaterThan`, `lessThan`
 
-**Actions:** `show`, `hide`, `goToField`, `goToEnd`, `skipTo`
+**Actions:** `show`, `hide`, `goToPage`, `goToEnd`, `skipTo`
 
 **Response (201):**
 ```json
@@ -1165,8 +1165,8 @@ Create form-level logic.
   "data": {
     "id": "65f1a2b3c4d5e6f7a8b9c0d8",
     "formId": "65f1a2b3c4d5e6f7a8b9c0d2",
-    "conditions": [ { "fieldKey": "field_abc123", "operator": "equals", "value": "Yes" } ],
-    "actions": [ { "action": "goToField", "target": "field_def456" } ],
+    "conditions": [ { "pageKey": "page_abc123", "operator": "equals", "value": "Yes" } ],
+    "actions": [ { "action": "goToPage", "target": "page_def456" } ],
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
@@ -1196,7 +1196,7 @@ Update a logic rule.
 ```json
 {
   "conditions": [
-    { "fieldKey": "field_abc123", "operator": "equals", "value": "No" }
+    { "pageKey": "page_abc123", "operator": "equals", "value": "No" }
   ],
   "actions": [
     { "action": "goToEnd" }
@@ -1254,7 +1254,7 @@ Get all responses for a form.
       "sessionId": "session_1704067200000",
       "answers": [
         {
-          "fieldKey": "field_abc123",
+          "pageKey": "page_abc123",
           "label": "What is your name?",
           "type": "shortText",
           "value": "John Doe"
@@ -1313,7 +1313,7 @@ Update a response.
 {
   "answers": [
     {
-      "fieldKey": "field_abc123",
+      "pageKey": "page_abc123",
       "label": "What is your name?",
       "type": "shortText",
       "value": "Jane Doe"
@@ -1389,9 +1389,9 @@ Get response summary.
   "message": "Response summary retrieved successfully",
   "data": {
     "totalResponses": 150,
-    "fields": [
+    "pages": [
       {
-        "fieldKey": "field_abc123",
+        "pageKey": "page_abc123",
         "label": "What is your name?",
         "type": "shortText",
         "answerCount": 150,
@@ -1485,7 +1485,7 @@ Get a published form by slug (public, no auth).
 ```
 
 ### GET /public/forms/:slug/schema
-Get form schema with fields (public, no auth).
+Get form schema with pages (public, no auth).
 
 **Response (200):**
 ```json
@@ -1498,7 +1498,7 @@ Get form schema with fields (public, no auth).
       "title": "Customer Feedback Form",
       "settings": { "oneQuestionAtATime": true, "showProgressBar": true, "allowMultipleSubmissions": true, "requireLogin": false, "collectIP": false }
     },
-    "fields": [ { ...field object... } ]
+    "pages": [ { ...page object... } ]
   }
 }
 ```
@@ -1520,7 +1520,7 @@ Get form theme (public, no auth).
 ```
 
 ### GET /public/forms/:slug/preview
-Get form preview with all fields (public, no auth).
+Get form preview with all pages (public, no auth).
 
 **Response (200):**
 ```json
@@ -1529,7 +1529,7 @@ Get form preview with all fields (public, no auth).
   "message": "Form preview retrieved successfully",
   "data": {
     "form": { ...form object... },
-    "fields": [ { ...field object... } ]
+    "pages": [ { ...page object... } ]
   }
 }
 ```
@@ -1542,13 +1542,13 @@ Submit a form response (public, no auth, rate-limited).
 {
   "answers": [
     {
-      "fieldKey": "field_abc123",
+      "pageKey": "page_abc123",
       "label": "What is your name?",
       "type": "shortText",
       "value": "John Doe"
     },
     {
-      "fieldKey": "field_def456",
+      "pageKey": "page_def456",
       "label": "Email address",
       "type": "email",
       "value": "john@example.com"
@@ -1578,7 +1578,7 @@ Save a form submission as draft (public, no auth).
 {
   "answers": [
     {
-      "fieldKey": "field_abc123",
+      "pageKey": "page_abc123",
       "label": "What is your name?",
       "type": "shortText",
       "value": "John Doe"
@@ -1654,7 +1654,7 @@ Get analytics overview.
   "data": {
     "totalResponses": 150,
     "todayResponses": 15,
-    "totalFields": 5,
+    "totalPages": 5,
     "averageResponsesPerDay": "5.0"
   }
 }
@@ -1718,7 +1718,7 @@ Get conversion analytics.
 ```
 
 ### GET /forms/:formId/analytics/dropoff
-Get field dropoff analytics.
+Get page dropoff analytics.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -1731,8 +1731,8 @@ Get field dropoff analytics.
     "formId": "65f1a2b3c4d5e6f7a8b9c0d2",
     "dropoffData": [
       {
-        "fieldId": "65f1a2b3c4d5e6f7a8b9c0d3",
-        "fieldKey": "field_abc123",
+        "pageId": "65f1a2b3c4d5e6f7a8b9c0d3",
+        "pageKey": "page_abc123",
         "label": "What is your name?",
         "reached": 150,
         "answered": 145,
@@ -1743,8 +1743,8 @@ Get field dropoff analytics.
 }
 ```
 
-### GET /forms/:formId/analytics/field/:fieldId
-Get analytics for a specific field.
+### GET /forms/:formId/analytics/page/:pageId
+Get analytics for a specific page.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -1754,11 +1754,11 @@ Get analytics for a specific field.
   "success": true,
   "message": "Success",
   "data": {
-    "field": { ...field object... },
+    "page": { ...page object... },
     "totalResponses": 145,
     "answers": [
       {
-        "fieldKey": "field_abc123",
+        "pageKey": "page_abc123",
         "label": "What is your name?",
         "type": "shortText",
         "value": "John Doe"
@@ -2205,7 +2205,7 @@ interface Form {
     requireLogin: boolean;
     collectIP: boolean;
   };
-  fields: FormField[];
+  pages: FormPage[];
   createdBy: string;
   updatedBy?: string;
   createdAt: Date;
@@ -2213,13 +2213,13 @@ interface Form {
 }
 ```
 
-**Note:** FormFields are now embedded subdocuments within the Form document. They are not stored as a separate collection.
+**Note:** FormPages are now embedded subdocuments within the Form document. They are not stored as a separate collection.
 
-### FormField (embedded in Form)
+### FormPage (embedded in Form)
 ```typescript
-interface FormField {
+interface FormPage {
   _id: string;
-  fieldKey: string;
+  pageKey: string;
   label: string;
   helperText: string;
   placeholder: string;
@@ -2228,7 +2228,7 @@ interface FormField {
   order: number;
   options: { label?: string; value?: string }[];
   validation: { minLength?: number; maxLength?: number; min?: number; max?: number; pattern?: string; message?: string };
-  logic: { whenFieldKey?: string; operator?: string; value?: any; action?: string; targetFieldKey?: string }[];
+  logic: { whenPageKey?: string; operator?: string; value?: any; action?: string; targetPageKey?: string }[];
   appearance: { width: "full" | "half"; icon: string };
   isActive: boolean;
   createdAt: Date;
@@ -2243,7 +2243,7 @@ interface FormResponse {
   formId: string;
   respondentId?: string;
   sessionId: string;
-  answers: { fieldKey: string; label: string; type: string; value: any }[];
+  answers: { pageKey: string; label: string; type: string; value: any }[];
   metadata: { ipAddress: string; userAgent: string; referrer: string; country: string; city: string };
   submittedAt: Date;
   createdAt: Date;

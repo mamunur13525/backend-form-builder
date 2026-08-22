@@ -56,14 +56,14 @@ src/
 │   │   ├── form.validation.ts
 │   │   └── form.types.ts
 │   │
-│   ├── fields/
-│   │   ├── field.model.ts
-│   │   ├── field.route.ts
-│   │   ├── field.controller.ts
-│   │   ├── field.service.ts
-│   │   ├── field.repository.ts
-│   │   ├── field.validation.ts
-│   │   └── field.types.ts
+│   ├── pages/
+│   │   ├── page.model.ts
+│   │   ├── page.route.ts
+│   │   ├── page.controller.ts
+│   │   ├── page.service.ts
+│   │   ├── page.repository.ts
+│   │   ├── page.validation.ts
+│   │   └── page.types.ts
 │   │
 │   ├── responses/
 │   │   ├── response.model.ts

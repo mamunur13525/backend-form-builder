@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 interface IFormLogic extends Document {
   formId: mongoose.Types.ObjectId;
   conditions: {
-    fieldKey: string;
+    pageKey: string;
     operator: string;
     value: any;
   }[];
@@ -20,7 +20,7 @@ const formLogicSchema = new Schema<IFormLogic>(
     formId: { type: Schema.Types.ObjectId, ref: "Form", required: true, index: true },
     conditions: [
       {
-        fieldKey: { type: String, required: true },
+        pageKey: { type: String, required: true },
         operator: { type: String, required: true },
         value: { type: Schema.Types.Mixed },
       },

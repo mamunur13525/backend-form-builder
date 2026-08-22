@@ -12,6 +12,6 @@ router.get("/:formId/analytics/views", analyticsController.getAnalyticsViews);
 router.get("/:formId/analytics/submissions", analyticsController.getAnalyticsSubmissions);
 router.get("/:formId/analytics/conversion", analyticsController.getAnalyticsConversion);
 router.get("/:formId/analytics/dropoff", analyticsController.getAnalyticsDropoff);
-router.get("/:formId/analytics/field/:fieldId", analyticsController.getAnalyticsField);
+router.get("/:formId/analytics/page/:pageId", analyticsController.getAnalyticsPage);
 
 export default router;

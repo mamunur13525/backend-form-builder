@@ -1,23 +1,23 @@
 export interface CreateLogicBody {
   conditions: {
-    fieldKey: string;
+    pageKey: string;
     operator: "equals" | "notEquals" | "contains" | "greaterThan" | "lessThan";
     value: any;
   }[];
   actions: {
-    action: "show" | "hide" | "goToField" | "goToEnd" | "skipTo";
+    action: "show" | "hide" | "goToPage" | "goToEnd" | "skipTo";
     target?: string;
   }[];
 }
 
 export interface UpdateLogicBody {
   conditions?: {
-    fieldKey: string;
+    pageKey: string;
     operator: "equals" | "notEquals" | "contains" | "greaterThan" | "lessThan";
     value: any;
   }[];
   actions?: {
-    action: "show" | "hide" | "goToField" | "goToEnd" | "skipTo";
+    action: "show" | "hide" | "goToPage" | "goToEnd" | "skipTo";
     target?: string;
   }[];
 }

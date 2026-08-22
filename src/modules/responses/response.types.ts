@@ -1,5 +1,5 @@
 export interface ResponseAnswer {
-  fieldKey: string;
+  pageKey: string;
   label: string;
   type: string;
   value: any;

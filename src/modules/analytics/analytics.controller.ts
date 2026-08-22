@@ -31,15 +31,15 @@ export const getAnalyticsOverview: RequestHandler = asyncHandler(async (req: Req
       formId,
       submittedAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
     }),
-    Form.findById(formId).select("fields").lean(),
+    Form.findById(formId).select("pages").lean(),
   ]);
 
-  const totalFields = form?.fields?.length || 0;
+  const totalPages = form?.pages?.length || 0;
 
   sendSuccess(res, {
     totalResponses,
     todayResponses,
-    totalFields,
+    totalPages,
     averageResponsesPerDay: totalResponses > 0 ? (totalResponses / 30).toFixed(1) : "0",
   });
 });
@@ -75,24 +75,24 @@ export const getAnalyticsConversion: RequestHandler = asyncHandler(async (req: R
 
 export const getAnalyticsDropoff: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const formId = req.params.formId as string;
-  const form = await Form.findById(formId).select("fields").lean();
+  const form = await Form.findById(formId).select("pages").lean();
   const responses = await FormResponse.find({ formId }).lean();
 
-  const fields = (form?.fields || []).sort((a: any, b: any) => a.order - b.order);
+  const pages = (form?.pages || []).sort((a: any, b: any) => a.order - b.order);
 
-  // Calculate dropoff per field
-  const dropoffData = fields.map((field: any) => {
-    const responsesWithField = responses.filter((r) =>
-      r.answers.some((a) => a.fieldKey === field.fieldKey)
+  // Calculate dropoff per page
+  const dropoffData = pages.map((page: any) => {
+    const responsesWithPage = responses.filter((r) =>
+      r.answers.some((a) => a.pageKey === page.pageKey)
     );
     return {
-      fieldId: field._id,
-      fieldKey: field.fieldKey,
-      label: field.label,
+      pageId: page._id,
+      pageKey: page.pageKey,
+      label: page.label,
       reached: responses.length,
-      answered: responsesWithField.length,
+      answered: responsesWithPage.length,
       dropoff: responses.length > 0
-        ? ((responses.length - responsesWithField.length) / responses.length) * 100
+        ? ((responses.length - responsesWithPage.length) / responses.length) * 100
         : 0,
     };
   });
@@ -100,27 +100,27 @@ export const getAnalyticsDropoff: RequestHandler = asyncHandler(async (req: Requ
   sendSuccess(res, { formId, dropoffData });
 });
 
-export const getAnalyticsField: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { formId, fieldId } = req.params;
+export const getAnalyticsPage: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { formId, pageId } = req.params;
   const form = await Form.findOne(
-    { _id: formId, "fields._id": fieldId },
-    { "fields.$": 1 }
+    { _id: formId, "pages._id": pageId },
+    { "pages.$": 1 }
   ).lean();
 
-  if (!form || !form.fields || form.fields.length === 0) {
-    sendSuccess(res, null, "Field not found");
+  if (!form || !form.pages || form.pages.length === 0) {
+    sendSuccess(res, null, "Page not found");
     return;
   }
 
-  const field = form.fields[0];
+  const page = form.pages[0];
   const responses = await FormResponse.find({ formId }).lean();
-  const fieldAnswers = responses
-    .filter((r) => r.answers.some((a) => a.fieldKey === field.fieldKey))
-    .map((r) => r.answers.find((a) => a.fieldKey === field.fieldKey));
+  const pageAnswers = responses
+    .filter((r) => r.answers.some((a) => a.pageKey === page.pageKey))
+    .map((r) => r.answers.find((a) => a.pageKey === page.pageKey));
 
   sendSuccess(res, {
-    field,
-    totalResponses: fieldAnswers.length,
-    answers: fieldAnswers,
+    page,
+    totalResponses: pageAnswers.length,
+    answers: pageAnswers,
   });
 });

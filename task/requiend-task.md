@@ -36,16 +36,16 @@ GET    /forms/:formId/slug
 PATCH  /forms/:formId/settings
 PATCH  /forms/:formId/theme
 PATCH  /forms/:formId/share
-Form fields
-POST   /forms/:formId/fields
-GET    /forms/:formId/fields
-GET    /forms/:formId/fields/:fieldId
-PATCH  /forms/:formId/fields/:fieldId
-DELETE /forms/:formId/fields/:fieldId
-PATCH  /forms/:formId/fields/reorder
-PATCH  /forms/:formId/fields/:fieldId/duplicate
-PATCH  /forms/:formId/fields/:fieldId/logic
-DELETE /forms/:formId/fields/:fieldId/logic
+Form pages
+POST   /forms/:formId/pages
+GET    /forms/:formId/pages
+GET    /forms/:formId/pages/:pageId
+PATCH  /forms/:formId/pages/:pageId
+DELETE /forms/:formId/pages/:pageId
+PATCH  /forms/:formId/pages/reorder
+PATCH  /forms/:formId/pages/:pageId/duplicate
+PATCH  /forms/:formId/pages/:pageId/logic
+DELETE /forms/:formId/pages/:pageId/logic
 Form builder blocks / sections
 POST   /forms/:formId/blocks
 GET    /forms/:formId/blocks
@@ -86,7 +86,7 @@ GET /forms/:formId/analytics/views
 GET /forms/:formId/analytics/submissions
 GET /forms/:formId/analytics/conversion
 GET /forms/:formId/analytics/dropoff
-GET /forms/:formId/analytics/field/:fieldId
+GET /forms/:formId/analytics/page/:pageId
 Dashboard / Admin stats
 GET /dashboard/overview
 GET /dashboard/forms
@@ -135,8 +135,8 @@ PATCH  /forms/:formId
 DELETE /forms/:formId
 PATCH  /forms/:formId/publish
 
-POST   /forms/:formId/fields
-PATCH  /forms/:formId/fields/reorder
+POST   /forms/:formId/pages
+PATCH  /forms/:formId/pages/reorder
 
 GET    /public/forms/:slug
 POST   /public/forms/:slug/submit

@@ -28,10 +28,10 @@ export const errorHandler = (
 
   // Mongoose duplicate key error
   if ((err as any).code === 11000) {
-    const field = Object.keys((err as any).keyValue)[0];
+    const page = Object.keys((err as any).keyValue)[0];
     return res.status(409).json({
       success: false,
-      message: `Duplicate value for ${field}`,
+      message: `Duplicate value for ${page}`,
     });
   }
 

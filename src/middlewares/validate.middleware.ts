@@ -25,7 +25,7 @@ export const validate = (schemas: ValidationSchemas) => {
     } catch (error: any) {
       if (error?.issues) {
         const errors = error.issues.map((e: { path: (string | number)[]; message: string }) => ({
-          field: e.path.join("."),
+          page: e.path.join("."),
           message: e.message,
         }));
         throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, "Validation failed", errors);

@@ -3,8 +3,8 @@
  * Keep this list as the single source of truth: the Mongoose schema, the Zod
  * validators and the default theme are all derived from it.
  *
- * The theme is form-wide — it styles every page of the form. Per-field styling
- * lives in `IFormField.appearance` and is unrelated.
+ * The theme is form-wide — it styles every page of the form. Per-page styling
+ * lives in `IFormPage.appearance` and is unrelated.
  */
 
 /** Horizontal alignment applied to all form content (question, answers, button). */

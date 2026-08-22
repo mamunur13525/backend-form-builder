@@ -54,10 +54,10 @@ export const exportResponses = async (formId: string, format: string = "json"): 
 
   if (format === "csv") {
     // For CSV, flatten the answers
-    const headers = ["submittedAt", "sessionId", ...new Set(responses.flatMap(r => r.answers.map(a => a.fieldKey)))];
+    const headers = ["submittedAt", "sessionId", ...new Set(responses.flatMap(r => r.answers.map(a => a.pageKey)))];
     const rows = responses.map(r => {
       const row: Record<string, any> = { submittedAt: r.submittedAt, sessionId: r.sessionId };
-      r.answers.forEach(a => { row[a.fieldKey] = a.value; });
+      r.answers.forEach(a => { row[a.pageKey] = a.value; });
       return row;
     });
     return { headers, rows };
@@ -78,25 +78,25 @@ export const getResponseSummary = async (formId: string): Promise<any> => {
     { submittedAt: -1 }
   );
 
-  // Group answers by fieldKey
-  const fieldSummaries: Record<string, { label: string; type: string; values: any[]; count: number }> = {};
+  // Group answers by pageKey
+  const pageSummaries: Record<string, { label: string; type: string; values: any[]; count: number }> = {};
 
   responses.forEach((r) => {
     r.answers.forEach((a) => {
-      if (!fieldSummaries[a.fieldKey]) {
-        fieldSummaries[a.fieldKey] = {
+      if (!pageSummaries[a.pageKey]) {
+        pageSummaries[a.pageKey] = {
           label: a.label,
           type: a.type,
           values: [],
           count: 0,
         };
       }
-      fieldSummaries[a.fieldKey].values.push(a.value);
-      fieldSummaries[a.fieldKey].count++;
+      pageSummaries[a.pageKey].values.push(a.value);
+      pageSummaries[a.pageKey].count++;
     });
   });
 
-  return { totalResponses: responses.length, fields: fieldSummaries };
+  return { totalResponses: responses.length, pages: pageSummaries };
 };
 
 export const markAsRead = async (formId: string, responseId: string): Promise<any> => {

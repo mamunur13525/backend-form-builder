@@ -1,9 +1,9 @@
 /**
- * Central registry of every field ("page") type supported by the form builder.
+ * Central registry of every page ("page") type supported by the form builder.
  * Keep this list as the single source of truth: the Mongoose enum, the Zod
  * validators and the per-type default settings are all derived from it.
  */
-export const fieldTypes = [
+export const pageTypes = [
   "shortText",
   "longText",
   "email",
@@ -27,10 +27,10 @@ export const fieldTypes = [
   "matrix",
 ] as const;
 
-export type FieldType = (typeof fieldTypes)[number];
+export type PageType = (typeof pageTypes)[number];
 
-/** Field types that never collect an answer from the respondent. */
-export const displayOnlyFieldTypes: FieldType[] = ["statement"];
+/** Page types that never collect an answer from the respondent. */
+export const displayOnlyPageTypes: PageType[] = ["statement"];
 
 export const logicOperators = [
   "equals",
@@ -40,7 +40,7 @@ export const logicOperators = [
   "lessThan",
 ] as const;
 
-export const logicActions = ["show", "hide", "goToField", "goToEnd"] as const;
+export const logicActions = ["show", "hide", "goToPage", "goToEnd"] as const;
 
 /* -------------------------------------------------------------------------- */
 /* Statement embeds                                                            */
@@ -64,7 +64,7 @@ export type EmbedProvider = (typeof embedProviders)[number];
 export const countryCodeModes = ["auto", "specific"] as const;
 
 /* -------------------------------------------------------------------------- */
-/* Choice fields (select / multiSelect)                                        */
+/* Choice pages (select / multiSelect)                                        */
 /* -------------------------------------------------------------------------- */
 
 export const selectionLimitModes = ["none", "exact", "range"] as const;
@@ -94,7 +94,7 @@ export const SCALE_UPPER_BOUND = 100;
 /* Address                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export const addressFieldKeys = [
+export const addressPageKeys = [
   "address1",
   "address2",
   "city",
@@ -103,10 +103,10 @@ export const addressFieldKeys = [
   "country",
 ] as const;
 
-export type AddressFieldKey = (typeof addressFieldKeys)[number];
+export type AddressPageKey = (typeof addressPageKeys)[number];
 
-export interface AddressSubFieldDefault {
-  key: AddressFieldKey;
+export interface AddressSubPageDefault {
+  key: AddressPageKey;
   label: string;
   placeholder: string;
   required: boolean;
@@ -114,7 +114,7 @@ export interface AddressSubFieldDefault {
   order: number;
 }
 
-export const defaultAddressFields: AddressSubFieldDefault[] = [
+export const defaultAddressPages: AddressSubPageDefault[] = [
   { key: "address1", label: "Address", placeholder: "", required: false, hidden: false, order: 1 },
   { key: "address2", label: "Address line 2", placeholder: "", required: false, hidden: false, order: 2 },
   { key: "city", label: "City", placeholder: "", required: false, hidden: false, order: 3 },

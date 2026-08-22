@@ -1,8 +1,16 @@
 export { User } from "./User";
 export type { IUser } from "./User";
 
-export { Form } from "./Form";
-export type { IForm, IFormField } from "./Form";
+export { Form, endPageSchema } from "./Form";
+export type {
+  IForm,
+  IFormPage,
+  IEndPage,
+  IEndPageButton,
+  IEndPageEmbed,
+  IEndPageRedirect,
+  IEndPageSocialShareMedia,
+} from "./Form";
 
 export { FormResponse } from "./FormResponse";
 export type { IFormResponse } from "./FormResponse";

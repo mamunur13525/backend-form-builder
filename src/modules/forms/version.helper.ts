@@ -8,7 +8,8 @@ export const createInitialVersion = async (
   formId: mongoose.Types.ObjectId | string,
   createdBy: string,
   initialData?: {
-    fields?: any[];
+    pages?: any[];
+    endPages?: any[];
     settings?: any;
     theme?: any;
   }
@@ -17,7 +18,8 @@ export const createInitialVersion = async (
     formId,
     version: 1,
     formSchema: {
-      fields: initialData?.fields || [],
+      pages: initialData?.pages || [],
+      endPages: initialData?.endPages || [],
       settings: initialData?.settings || {
         oneQuestionAtATime: true,
         showProgressBar: true,
@@ -41,7 +43,12 @@ export const ensureDraftVersion = async (
     const v1 = await createInitialVersion(
       form._id as mongoose.Types.ObjectId,
       userId || form.createdBy.toString(),
-      { fields: form.fields, settings: form.settings, theme: form.theme }
+      {
+        pages: form.pages,
+        endPages: form.endPages,
+        settings: form.settings,
+        theme: form.theme,
+      }
     );
     form.draftVersionId = v1._id as mongoose.Types.ObjectId;
     if (form.status === formStatus.PUBLISHED && !form.publishedVersionId) {
@@ -89,7 +96,12 @@ export const ensureDraftVersion = async (
     const v = await createInitialVersion(
       form._id as mongoose.Types.ObjectId,
       userId || form.createdBy.toString(),
-      { fields: form.fields, settings: form.settings, theme: form.theme }
+      {
+        pages: form.pages,
+        endPages: form.endPages,
+        settings: form.settings,
+        theme: form.theme,
+      }
     );
     form.draftVersionId = v._id as mongoose.Types.ObjectId;
     await form.save();

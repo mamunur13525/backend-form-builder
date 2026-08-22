@@ -30,7 +30,8 @@ const toFormResponse = async (form: any): Promise<FormResponse> => {
   // Filled in against the defaults so forms created before a theme property
   // existed still return a complete appearance object.
   const theme = buildFormTheme(draftVersion?.formSchema?.theme || form.theme);
-  const fields = draftVersion?.formSchema?.fields || form.fields || [];
+  const pages = draftVersion?.formSchema?.pages || form.pages || [];
+  const endPages = draftVersion?.formSchema?.endPages || form.endPages || [];
   const settings = draftVersion?.formSchema?.settings || form.settings || {
     oneQuestionAtATime: true,
     showProgressBar: true,
@@ -49,7 +50,8 @@ const toFormResponse = async (form: any): Promise<FormResponse> => {
     hasUnpublishedChanges: !!form.hasUnpublishedChanges,
     version: draftVersion?.version || 1,
     theme,
-    fields,
+    pages,
+    endPages,
     settings,
     createdBy: form.createdBy?._id?.toString() || form.createdBy?.toString(),
     updatedBy: form.updatedBy?.toString(),
@@ -166,7 +168,7 @@ export const duplicateForm = async (
   });
 
   const v1 = await createInitialVersion(newForm._id, userId, {
-    fields: JSON.parse(JSON.stringify(origVersion.formSchema.fields || [])),
+    pages: JSON.parse(JSON.stringify(origVersion.formSchema.pages || [])),
     settings: JSON.parse(JSON.stringify(origVersion.formSchema.settings || {})),
     theme: buildFormTheme(origVersion.formSchema.theme),
   });
@@ -212,7 +214,7 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
       form.status = formStatus.PUBLISHED;
       form.draftVersionId = publishedVersion._id as any;
       form.hasUnpublishedChanges = false;
-      form.fields = publishedVersion.formSchema.fields as any;
+      form.pages = publishedVersion.formSchema.pages as any;
       form.settings = publishedVersion.formSchema.settings as any;
       form.theme = publishedVersion.formSchema.theme as any;
       await form.save();
@@ -226,7 +228,7 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
   form.hasUnpublishedChanges = false;
 
   // Sync schema to Form document for backwards compatibility
-  form.fields = draftVersion.formSchema.fields as any;
+  form.pages = draftVersion.formSchema.pages as any;
   form.settings = draftVersion.formSchema.settings as any;
   form.theme = draftVersion.formSchema.theme as any;
 

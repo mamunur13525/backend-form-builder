@@ -1,6 +1,6 @@
-import { IFieldSettings } from "../../models/Form";
+import { IPageSettings } from "../../models/Form";
 import {
-  defaultAddressFields,
+  defaultAddressPages,
   DEFAULT_MAX_UPLOAD_SIZE_MB,
   DEFAULT_OPTIONS_PER_ROW_DESKTOP,
   DEFAULT_OPTIONS_PER_ROW_MOBILE,
@@ -8,11 +8,11 @@ import {
   DEFAULT_RATING_STYLE,
   DEFAULT_SCALE_MAX,
   DEFAULT_SCALE_MIN,
-  FieldType,
-} from "../../constants/fieldTypes";
+  PageType,
+} from "../../constants/pageTypes";
 
-/** Which settings group a field type owns. Types absent here have no settings. */
-const settingsGroupByType: Partial<Record<FieldType, keyof IFieldSettings>> = {
+/** Which settings group a page type owns. Types absent here have no settings. */
+const settingsGroupByType: Partial<Record<PageType, keyof IPageSettings>> = {
   email: "email",
   phone: "phone",
   statement: "statement",
@@ -27,10 +27,10 @@ const settingsGroupByType: Partial<Record<FieldType, keyof IFieldSettings>> = {
   matrix: "matrix",
 };
 
-export const getSettingsGroup = (type: string): keyof IFieldSettings | undefined =>
-  settingsGroupByType[type as FieldType];
+export const getSettingsGroup = (type: string): keyof IPageSettings | undefined =>
+  settingsGroupByType[type as PageType];
 
-const buildDefaults = (group: keyof IFieldSettings, type: string): IFieldSettings => {
+const buildDefaults = (group: keyof IPageSettings, type: string): IPageSettings => {
   switch (group) {
     case "email":
       return { email: { businessEmailsOnly: false, emailVerification: false } };
@@ -58,7 +58,7 @@ const buildDefaults = (group: keyof IFieldSettings, type: string): IFieldSetting
             mobile: DEFAULT_OPTIONS_PER_ROW_MOBILE,
           },
           hideLabels: false,
-          // Selection limits only make sense for multi-answer fields.
+          // Selection limits only make sense for multi-answer pages.
           ...(type === "multiSelect" || type === "checkbox"
             ? { selectionLimit: { mode: "none" as const } }
             : {}),
@@ -66,7 +66,7 @@ const buildDefaults = (group: keyof IFieldSettings, type: string): IFieldSetting
       };
 
     case "address":
-      return { address: { fields: defaultAddressFields.map((f) => ({ ...f })) } };
+      return { address: { pages: defaultAddressPages.map((f) => ({ ...f })) } };
 
     case "rating":
       return { rating: { style: DEFAULT_RATING_STYLE, max: DEFAULT_RATING_MAX } };
@@ -124,15 +124,15 @@ const merge = <T extends Record<string, any>>(base: T, override: Record<string, 
 };
 
 /**
- * Produce the settings object to persist for a field.
+ * Produce the settings object to persist for a page.
  *
- * Only the group belonging to `type` is kept, so switching a field's type never
+ * Only the group belonging to `type` is kept, so switching a page's type never
  * leaves stale settings behind. Incoming values are merged over the defaults.
  */
-export const buildFieldSettings = (
+export const buildPageSettings = (
   type: string,
-  incoming?: IFieldSettings | Record<string, any>
-): IFieldSettings => {
+  incoming?: IPageSettings | Record<string, any>
+): IPageSettings => {
   const group = getSettingsGroup(type);
   if (!group) return {};
 
@@ -141,5 +141,5 @@ export const buildFieldSettings = (
   const provided = toPlainObject(source?.[group]);
   if (!provided) return defaults;
 
-  return { [group]: merge(defaults[group] as Record<string, any>, provided) } as IFieldSettings;
+  return { [group]: merge(defaults[group] as Record<string, any>, provided) } as IPageSettings;
 };

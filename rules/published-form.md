@@ -101,7 +101,7 @@ The complete form schema is stored inside immutable FormVersion documents.
     version: Number,
 
     schema: {
-        fields: [],
+        pages: [],
         settings: {}
     },
 

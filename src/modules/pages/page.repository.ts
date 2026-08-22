@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
-import { Form, IFormField } from "../../models/Form";
+import { Form, IFormPage } from "../../models/Form";
 import { FormVersion } from "../../models/FormVersion";
 import { ensureDraftVersion } from "../forms/version.helper";
 
-const buildFieldFilter = (fieldId: string): Record<string, any> => {
-  if (mongoose.Types.ObjectId.isValid(fieldId)) {
-    return { _id: new mongoose.Types.ObjectId(fieldId) };
+const buildPageFilter = (pageId: string): Record<string, any> => {
+  if (mongoose.Types.ObjectId.isValid(pageId)) {
+    return { _id: new mongoose.Types.ObjectId(pageId) };
   }
-  return { fieldKey: fieldId };
+  return { pageKey: pageId };
 };
 
 export const getDraftVersionForForm = async (formId: string) => {
@@ -19,9 +19,9 @@ export const getDraftVersionForForm = async (formId: string) => {
   return { form, draftVersion };
 };
 
-export const createField = async (data: {
+export const createPage = async (data: {
   formId: string;
-  fieldKey: string;
+  pageKey: string;
   label: string;
   type: string;
   order: number;
@@ -33,13 +33,13 @@ export const createField = async (data: {
   validation?: any;
   settings?: any;
   appearance?: any;
-}): Promise<{ field: IFormField; hasUnpublishedChanges: boolean }> => {
+}): Promise<{ page: IFormPage; hasUnpublishedChanges: boolean }> => {
   const { form, draftVersion } = await getDraftVersionForForm(data.formId);
 
-  const fieldId = new mongoose.Types.ObjectId();
-  const field: any = {
-    _id: fieldId,
-    fieldKey: data.fieldKey,
+  const pageId = new mongoose.Types.ObjectId();
+  const page: any = {
+    _id: pageId,
+    pageKey: data.pageKey,
     label: data.label,
     type: data.type,
     order: data.order,
@@ -57,62 +57,62 @@ export const createField = async (data: {
     updatedAt: new Date(),
   };
 
-  draftVersion.formSchema.fields.push(field);
+  draftVersion.formSchema.pages.push(page);
   draftVersion.markModified("formSchema");
   await draftVersion.save();
 
   if (form.publishedVersionId) {
     form.hasUnpublishedChanges = true;
   }
-  form.fields = draftVersion.formSchema.fields as any;
+  form.pages = draftVersion.formSchema.pages as any;
   await form.save();
 
-  return { field: field as IFormField, hasUnpublishedChanges: form.hasUnpublishedChanges };
+  return { page: page as IFormPage, hasUnpublishedChanges: form.hasUnpublishedChanges };
 };
 
-export const findFieldsByFormId = async (formId: string): Promise<IFormField[]> => {
+export const findPagesByFormId = async (formId: string): Promise<IFormPage[]> => {
   const { draftVersion } = await getDraftVersionForForm(formId);
-  return (draftVersion.formSchema.fields || []).filter((f: any) => f.isActive) as unknown as IFormField[];
+  return (draftVersion.formSchema.pages || []).filter((f: any) => f.isActive) as unknown as IFormPage[];
 };
 
-export const findFieldById = async (
+export const findPageById = async (
   formId: string,
-  fieldId: string
-): Promise<IFormField | null> => {
+  pageId: string
+): Promise<IFormPage | null> => {
   const { draftVersion } = await getDraftVersionForForm(formId);
-  const fields = draftVersion.formSchema.fields || [];
+  const pages = draftVersion.formSchema.pages || [];
 
-  const filter = buildFieldFilter(fieldId);
-  const found = fields.find((f: any) => {
+  const filter = buildPageFilter(pageId);
+  const found = pages.find((f: any) => {
     if (filter._id) {
       return f._id && f._id.toString() === filter._id.toString();
     }
-    return f.fieldKey === filter.fieldKey;
+    return f.pageKey === filter.pageKey;
   });
 
-  return (found as unknown as IFormField) || null;
+  return (found as unknown as IFormPage) || null;
 };
 
-export const updateField = async (
+export const updatePage = async (
   formId: string,
-  fieldId: string,
+  pageId: string,
   data: Record<string, any>
-): Promise<{ field: IFormField; hasUnpublishedChanges: boolean } | null> => {
+): Promise<{ page: IFormPage; hasUnpublishedChanges: boolean } | null> => {
   const { form, draftVersion } = await getDraftVersionForForm(formId);
-  const fields = draftVersion.formSchema.fields || [];
-  const filter = buildFieldFilter(fieldId);
+  const pages = draftVersion.formSchema.pages || [];
+  const filter = buildPageFilter(pageId);
 
-  const index = fields.findIndex((f: any) => {
+  const index = pages.findIndex((f: any) => {
     if (filter._id) {
       return f._id && f._id.toString() === filter._id.toString();
     }
-    return f.fieldKey === filter.fieldKey;
+    return f.pageKey === filter.pageKey;
   });
 
   if (index === -1) return null;
 
-  const targetField = fields[index];
-  Object.assign(targetField, data, { updatedAt: new Date() });
+  const targetPage = pages[index];
+  Object.assign(targetPage, data, { updatedAt: new Date() });
 
   draftVersion.markModified("formSchema");
   await draftVersion.save();
@@ -120,21 +120,21 @@ export const updateField = async (
   if (form.publishedVersionId) {
     form.hasUnpublishedChanges = true;
   }
-  form.fields = draftVersion.formSchema.fields as any;
+  form.pages = draftVersion.formSchema.pages as any;
   await form.save();
 
-  return { field: targetField as unknown as IFormField, hasUnpublishedChanges: form.hasUnpublishedChanges };
+  return { page: targetPage as unknown as IFormPage, hasUnpublishedChanges: form.hasUnpublishedChanges };
 };
 
-export const deleteField = async (formId: string, fieldId: string): Promise<{ hasUnpublishedChanges: boolean }> => {
+export const deletePage = async (formId: string, pageId: string): Promise<{ hasUnpublishedChanges: boolean }> => {
   const { form, draftVersion } = await getDraftVersionForForm(formId);
-  const filter = buildFieldFilter(fieldId);
+  const filter = buildPageFilter(pageId);
 
-  draftVersion.formSchema.fields = (draftVersion.formSchema.fields || []).filter((f: any) => {
+  draftVersion.formSchema.pages = (draftVersion.formSchema.pages || []).filter((f: any) => {
     if (filter._id) {
       return !f._id || f._id.toString() !== filter._id.toString();
     }
-    return f.fieldKey !== filter.fieldKey;
+    return f.pageKey !== filter.pageKey;
   });
 
   draftVersion.markModified("formSchema");
@@ -143,7 +143,7 @@ export const deleteField = async (formId: string, fieldId: string): Promise<{ ha
   if (form.publishedVersionId) {
     form.hasUnpublishedChanges = true;
   }
-  form.fields = draftVersion.formSchema.fields as any;
+  form.pages = draftVersion.formSchema.pages as any;
   await form.save();
 
   return { hasUnpublishedChanges: form.hasUnpublishedChanges };
@@ -151,25 +151,25 @@ export const deleteField = async (formId: string, fieldId: string): Promise<{ ha
 
 export const getMaxOrder = async (formId: string): Promise<number> => {
   const { draftVersion } = await getDraftVersionForForm(formId);
-  const fields = draftVersion.formSchema.fields || [];
-  if (fields.length === 0) return 0;
-  return fields.reduce((max: number, f: any) => (f.order > max ? f.order : max), 0);
+  const pages = draftVersion.formSchema.pages || [];
+  if (pages.length === 0) return 0;
+  return pages.reduce((max: number, f: any) => (f.order > max ? f.order : max), 0);
 };
 
-export const updateFieldOrders = async (
+export const updatePageOrders = async (
   formId: string,
-  updates: { fieldId: string; order: number }[]
+  updates: { pageId: string; order: number }[]
 ): Promise<{ hasUnpublishedChanges: boolean }> => {
   const { form, draftVersion } = await getDraftVersionForForm(formId);
-  const fields = draftVersion.formSchema.fields || [];
+  const pages = draftVersion.formSchema.pages || [];
 
   for (const update of updates) {
-    const filter = buildFieldFilter(update.fieldId);
-    const target = fields.find((f: any) => {
+    const filter = buildPageFilter(update.pageId);
+    const target = pages.find((f: any) => {
       if (filter._id) {
         return f._id && f._id.toString() === filter._id.toString();
       }
-      return f.fieldKey === filter.fieldKey;
+      return f.pageKey === filter.pageKey;
     });
     if (target) {
       target.order = update.order;
@@ -182,7 +182,7 @@ export const updateFieldOrders = async (
   if (form.publishedVersionId) {
     form.hasUnpublishedChanges = true;
   }
-  form.fields = draftVersion.formSchema.fields as any;
+  form.pages = draftVersion.formSchema.pages as any;
   await form.save();
 
   return { hasUnpublishedChanges: form.hasUnpublishedChanges };

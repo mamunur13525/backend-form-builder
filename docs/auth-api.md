@@ -36,19 +36,19 @@ All responses use a consistent envelope:
 {
   "success": false,
   "message": string,
-  "errors"?: Array<{ field: string; message: string }>
+  "errors"?: Array<{ page: string; message: string }>
 }
 ```
 
-**Validation errors (422)** include field-level detail:
+**Validation errors (422)** include page-level detail:
 
 ```json
 {
   "success": false,
   "message": "Validation failed",
   "errors": [
-    { "field": "email", "message": "Invalid email address" },
-    { "field": "password", "message": "Password must be at least 8 characters" }
+    { "page": "email", "message": "Invalid email address" },
+    { "page": "password", "message": "Password must be at least 8 characters" }
   ]
 }
 ```
@@ -119,7 +119,7 @@ export interface AuthResponse {
 export interface ApiError {
   success: false;
   message: string;
-  errors?: Array<{ field: string; message: string }>;
+  errors?: Array<{ page: string; message: string }>;
 }
 ```
 
@@ -133,7 +133,7 @@ Creates an email/password account and returns tokens immediately (no email verif
 
 **Request Body:**
 
-| Field | Type | Validation |
+| Page | Type | Validation |
 |-------|------|------------|
 | `name` | string | 2–100 characters |
 | `email` | string | Valid email (lowercased server-side) |
@@ -165,8 +165,8 @@ Creates an email/password account and returns tokens immediately (no email verif
 
 | Status | Message | Action |
 |--------|---------|--------|
-| 409 | `Email already registered` | Show error on email field |
-| 422 | `Validation failed` | Map `errors[]` to form fields |
+| 409 | `Email already registered` | Show error on email page |
+| 422 | `Validation failed` | Map `errors[]` to form pages |
 | 429 | Rate limit message | Disable submit, show "try later" |
 
 ---
@@ -191,7 +191,7 @@ Creates an email/password account and returns tokens immediately (no email verif
 | 401 | `Invalid email or password` | Generic form error (deliberately ambiguous) |
 | 401 | `This account uses Google sign-in. Please sign in with Google.` | Highlight Google button |
 | 403 | `Account is deactivated` | Show "Contact support" message |
-| 422 | `Validation failed` | Field errors |
+| 422 | `Validation failed` | Page errors |
 | 429 | Rate limit | Disable submit |
 
 > **Important:** Two different `401` messages require different UI — branch on `message`, not just status.
@@ -333,10 +333,10 @@ Not authenticated (refresh token is the credential). Not rate-limited.
 
 | Status | Message | Action |
 |--------|---------|--------|
-| 401 | `Current password is incorrect` | Show error on current password field |
+| 401 | `Current password is incorrect` | Show error on current password page |
 | 400 | `Cannot change password. This account uses Google sign-in.` | Hide form for Google users |
 | 404 | `User not found` | Force logout |
-| 422 | Validation failed | Field errors |
+| 422 | Validation failed | Page errors |
 
 ---
 
@@ -433,8 +433,8 @@ async logout() {
 | 401 | refresh-token | Refresh token dead | Clear tokens, redirect login |
 | 403 | login | Account deactivated | Terminal message |
 | 404 | me / change-password | User deleted | Force logout |
-| 409 | register | Email already exists | Field error on email |
-| 422 | any validated route | Validation failure | Map `errors[]` to fields |
+| 409 | register | Email already exists | Page error on email |
+| 422 | any validated route | Validation failure | Map `errors[]` to pages |
 | 429 | limited routes | Rate limited | Disable submit, show timer |
 | 500 | google | Invalid Google ID token | "Sign-in failed, retry" |
 | 501 | reset/verify | Not implemented | Feature-flag off |
@@ -537,16 +537,16 @@ class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public fieldErrors: Array<{ field: string; message: string }> = []
+    public pageErrors: Array<{ page: string; message: string }> = []
   ) {
     super(message);
     this.name = "ApiError";
   }
 
   /** Convenience for react-hook-form setError */
-  get byField(): Record<string, string> {
+  get byPage(): Record<string, string> {
     return Object.fromEntries(
-      this.fieldErrors.map(e => [e.field, e.message])
+      this.pageErrors.map(e => [e.page, e.message])
     );
   }
 }
@@ -690,7 +690,7 @@ export const authApi = {
 - [ ] Change password form (`PATCH`) hidden for Google provider users
 
 **Error Handling**
-- [ ] `422` validation errors mapped to form fields
+- [ ] `422` validation errors mapped to form pages
 - [ ] `429` rate limit → disable submit + "try in 15 min"
 - [ ] `403`/`404` user gone → force logout
 - [ ] Guard `res.json()` for non-JSON responses
