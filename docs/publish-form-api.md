@@ -168,7 +168,20 @@ Returns the live published form schema. Returns `404` if the form is unpublished
     "settings": {
       "oneQuestionAtATime": true,
       "showProgressBar": true,
-      "allowMultipleSubmissions": true
+      "allowMultipleSubmissions": true,
+      "requireLogin": false,
+      "general": {
+        "show_progress_bar": true,
+        "initial_loader": true,
+        "navigation_arrows": true,
+        "refill_link": { "isActive": false, "link": "" },
+        "show_powered_by_company_name": true,
+        "anonymous_survey": false
+      },
+      "variables": [
+        { "name": "score", "type": "number", "value": 0 },
+        { "name": "price", "type": "number", "value": 0 }
+      ]
     }
   }
 }

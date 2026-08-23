@@ -1,7 +1,15 @@
 export { User } from "./User";
 export type { IUser } from "./User";
 
-export { Form, endPageSchema } from "./Form";
+export {
+  Form,
+  endPageSchema,
+  formSettingsSchema,
+  buildDefaultFormSettings,
+  normalizeFormSettings,
+  resolveVariableDefaults,
+  DEFAULT_FORM_VARIABLES,
+} from "./Form";
 export type {
   IForm,
   IFormPage,
@@ -10,6 +18,20 @@ export type {
   IEndPageEmbed,
   IEndPageRedirect,
   IEndPageSocialShareMedia,
+  IFormSettings,
+  IGeneralSettings,
+  IEmailSettings,
+  IAccessSettings,
+  IHiddenFieldsSettings,
+  IHiddenField,
+  IVariable,
+  IRefillLink,
+  IMultipleRecipients,
+  IReplyTo,
+  IResponseLimit,
+  DetectionMethod,
+  ResponseLimitPeriod,
+  ResponseLimitType,
 } from "./Form";
 
 export { FormResponse } from "./FormResponse";

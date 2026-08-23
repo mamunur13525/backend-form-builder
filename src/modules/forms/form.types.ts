@@ -1,5 +1,9 @@
 import { FormStatus } from "../../constants/status";
-import { IEndPage, IFormTheme } from "../../models/Form";
+import {
+  IEndPage,
+  IFormSettings,
+  IFormTheme,
+} from "../../models/Form";
 import {
   ContentAlignment,
   CornerRadius,
@@ -69,13 +73,7 @@ export interface FormResponse {
   hasUnpublishedChanges?: boolean;
   version?: number;
   theme: IFormTheme;
-  settings: {
-    oneQuestionAtATime: boolean;
-    showProgressBar: boolean;
-    allowMultipleSubmissions: boolean;
-    requireLogin: boolean;
-    collectIP: boolean;
-  };
+  settings: IFormSettings;
   pages: {}[];
   endPages?: IEndPage[];
   createdBy: string;

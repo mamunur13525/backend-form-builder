@@ -2,7 +2,7 @@ import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
 import { nanoid } from "nanoid";
 import mongoose from "mongoose";
-import { Form } from "../../models/Form";
+import { Form, normalizeFormSettings } from "../../models/Form";
 import { FormVersion } from "../../models/FormVersion";
 import { FormResponse } from "../../models/FormResponse";
 import {
@@ -68,6 +68,27 @@ const findPublicFormWithVersion = async (slugOrId: string) => {
   return { form, version };
 };
 
+/**
+ * Settings a respondent-facing client needs to render/interact with the form.
+ *
+ * Everything else is stripped: owner notifications (`emailSettings`), admin
+ * scheduling/compliance (`access`), and server-injected hidden fields
+ * (`hiddenFields`). The value is normalized first so missing or legacy stored
+ * groups still resolve their defaults — in particular `variables`, which the
+ * client uses for dynamic price/score values.
+ */
+export const buildPublicFormSettings = (stored: any) => {
+  const full = normalizeFormSettings(stored);
+  return {
+    oneQuestionAtATime: full.oneQuestionAtATime,
+    showProgressBar: full.showProgressBar,
+    allowMultipleSubmissions: full.allowMultipleSubmissions,
+    requireLogin: full.requireLogin,
+    general: full.general,
+    variables: full.variables,
+  };
+};
+
 export const getPublicForm = async (slugOrId: string): Promise<any> => {
   const { form, version } = await findPublicFormWithVersion(slugOrId);
 
@@ -81,11 +102,7 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
     pages: version.formSchema.pages,
     endPages: version.formSchema.endPages || [],
     theme: buildFormTheme(version.formSchema.theme),
-    settings: {
-      oneQuestionAtATime: version.formSchema.settings?.oneQuestionAtATime,
-      showProgressBar: version.formSchema.settings?.showProgressBar,
-      allowMultipleSubmissions: version.formSchema.settings?.allowMultipleSubmissions,
-    },
+    settings: buildPublicFormSettings(version.formSchema.settings),
     createdBy: form.createdBy,
     createdAt: form.createdAt,
     updatedAt: form.updatedAt,
@@ -109,7 +126,7 @@ export const getFormSchema = async (slugOrId: string): Promise<any> => {
       title: form.title,
       version: version.version,
       formVersionId: version._id,
-      settings: version.formSchema.settings,
+      settings: buildPublicFormSettings(version.formSchema.settings),
     },
     pages,
     endPages,
@@ -154,7 +171,7 @@ export const getFormPreview = async (slugOrId: string): Promise<any> => {
     form: {
       ...form,
       theme: buildFormTheme(theme),
-      settings,
+      settings: buildPublicFormSettings(settings),
     },
     pages,
     endPages,

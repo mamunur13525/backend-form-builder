@@ -6,7 +6,7 @@ import { generateUniqueSlug } from "../../utils/slug";
 import { getPaginationMeta } from "../../utils/pagination";
 import * as formRepo from "./form.repository";
 import { FormVersion } from "../../models/FormVersion";
-import { Form } from "../../models/Form";
+import { Form, normalizeFormSettings } from "../../models/Form";
 import { createInitialVersion, ensureDraftVersion } from "./version.helper";
 import { buildFormTheme } from "./form.theme";
 import { buildPageSettings } from "../pages/page.settings";
@@ -100,13 +100,7 @@ const toFormResponse = async (form: any): Promise<FormResponse> => {
   const theme = buildFormTheme(draftVersion?.formSchema?.theme || form.theme);
   const pages = draftVersion?.formSchema?.pages || form.pages || [];
   const endPages = draftVersion?.formSchema?.endPages || form.endPages || [];
-  const settings = draftVersion?.formSchema?.settings || form.settings || {
-    oneQuestionAtATime: true,
-    showProgressBar: true,
-    allowMultipleSubmissions: true,
-    requireLogin: false,
-    collectIP: false,
-  };
+  const settings = normalizeFormSettings(draftVersion?.formSchema?.settings || form.settings);
 
   return {
     id: form._id.toString(),

@@ -63,6 +63,145 @@ export interface IPageOption {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Analysis settings                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** How to detect a returning respondent when duplicate prevention is on. */
+export type DetectionMethod = "cookie" | "ip" | "cookie_ip";
+
+/** `single` blocks once the limit is hit; `multiple` allows up to `count`. */
+export type ResponseLimitType = "single" | "multiple";
+
+export type ResponseLimitPeriod = "day" | "month" | "year" | "lifetime";
+
+export const detectionMethods: DetectionMethod[] = ["cookie", "ip", "cookie_ip"];
+
+export const responseLimitTypes: ResponseLimitType[] = ["single", "multiple"];
+
+export const responseLimitPeriods: ResponseLimitPeriod[] = [
+  "day",
+  "month",
+  "year",
+  "lifetime",
+];
+
+/** Lets a respondent start over with a fresh link after finishing a form. */
+export interface IRefillLink {
+  isActive: boolean;
+  link: string;
+}
+
+export interface IGeneralSettings {
+  show_progress_bar: boolean;
+  initial_loader: boolean;
+  navigation_arrows: boolean;
+  refill_link: IRefillLink;
+  show_powered_by_company_name: boolean;
+  anonymous_survey: boolean;
+}
+
+export interface IMultipleRecipients {
+  isActive: boolean;
+  emails: string[];
+}
+
+export interface ICustomEmail {
+  isActive: boolean;
+  address: string;
+}
+
+export interface IReplyTo {
+  /** Use the first email field chosen on the form as the notification Reply-To. */
+  automatic_first_email_field: boolean;
+  custom_email: ICustomEmail;
+}
+
+export interface IEmailSettings {
+  receive_email_notification: boolean;
+  multiple_recipients: IMultipleRecipients;
+  reply_to: IReplyTo;
+  email_subject: string;
+  email_body: string;
+}
+
+export interface ICloseFormByDate {
+  isActive: boolean;
+  date: Date | null;
+}
+
+export interface ICloseFormBySubmissions {
+  isActive: boolean;
+  submissions: number;
+}
+
+export interface IAutoRefreshInactivity {
+  isActive: boolean;
+  minutes: number;
+}
+
+export interface IResponseLimit {
+  type: ResponseLimitType;
+  count: number;
+  period: ResponseLimitPeriod;
+}
+
+export interface IAccessSettings {
+  close_form: boolean;
+  close_form_by_date: ICloseFormByDate;
+  close_form_by_submissions: ICloseFormBySubmissions;
+  auto_refresh_inactivity: IAutoRefreshInactivity;
+  preventDuplicateSubmissions: boolean;
+  detectionMethod: DetectionMethod;
+  responseLimit: IResponseLimit;
+}
+
+export interface IHiddenField {
+  key: string;
+  value: string;
+}
+
+export interface IHiddenFieldsSettings {
+  enabled: boolean;
+  fields: IHiddenField[];
+}
+
+export interface IVariable {
+  name: string;
+  type: "text" | "number";
+  value: any;
+}
+
+/**
+ * Every form ships with these default variables already available in the
+ * settings panel. They are always present in the normalized settings object;
+ * a stored variable with the same name overrides the default value.
+ */
+export const DEFAULT_FORM_VARIABLES: IVariable[] = [
+  { name: "score", type: "number", value: 0 },
+  { name: "price", type: "number", value: 0 },
+];
+
+/**
+ * The editable settings document that is snapshotted inside each
+ * `FormVersion`. The legacy flat boolean knobs are kept for backwards
+ * compatibility with the public-form rendering; the sub-groups are edited from
+ * the settings panel.
+ */
+export interface IFormSettings {
+  oneQuestionAtATime: boolean;
+  showProgressBar: boolean;
+  allowMultipleSubmissions: boolean;
+  requireLogin: boolean;
+  collectIP: boolean;
+
+  general?: IGeneralSettings;
+  emailSettings?: IEmailSettings;
+  access?: IAccessSettings;
+  hiddenFields?: IHiddenFieldsSettings;
+  variables?: IVariable[];
+}
+
+/* -------------------------------------------------------------------------- */
 /* Form-level appearance (theme)                                              */
 /* -------------------------------------------------------------------------- */
 
@@ -320,13 +459,7 @@ export interface IForm extends Document {
   publishedVersionId?: mongoose.Types.ObjectId | null;
   hasUnpublishedChanges: boolean;
   theme: IFormTheme;
-  settings: {
-    oneQuestionAtATime: boolean;
-    showProgressBar: boolean;
-    allowMultipleSubmissions: boolean;
-    requireLogin: boolean;
-    collectIP: boolean;
-  };
+  settings: IFormSettings;
   pages: IFormPage[];
   endPages: IEndPage[];
   createdBy: IUser["_id"];
@@ -405,6 +538,291 @@ export const formThemeSchema = new Schema<IFormTheme>(
   },
   subDoc
 );
+
+/* -------------------------------------------------------------------------- */
+/* Form settings (general / email) sub-schemas                                 */
+/* -------------------------------------------------------------------------- */
+
+const refillLinkSchema = new Schema<IRefillLink>(
+  {
+    isActive: { type: Boolean, default: false },
+    link: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const generalSettingsSchema = new Schema<IGeneralSettings>(
+  {
+    show_progress_bar: { type: Boolean, default: true },
+    initial_loader: { type: Boolean, default: true },
+    navigation_arrows: { type: Boolean, default: true },
+    refill_link: { type: refillLinkSchema, default: () => ({ isActive: false, link: "" }) },
+    show_powered_by_company_name: { type: Boolean, default: true },
+    anonymous_survey: { type: Boolean, default: false },
+  },
+  subDoc
+);
+
+const multipleRecipientsSchema = new Schema<IMultipleRecipients>(
+  {
+    isActive: { type: Boolean, default: false },
+    emails: { type: [String], default: [] },
+  },
+  subDoc
+);
+
+const customEmailSchema = new Schema<ICustomEmail>(
+  {
+    isActive: { type: Boolean, default: false },
+    address: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const replyToSchema = new Schema<IReplyTo>(
+  {
+    automatic_first_email_field: { type: Boolean, default: false },
+    custom_email: { type: customEmailSchema, default: () => ({ isActive: false, address: "" }) },
+  },
+  subDoc
+);
+
+const formEmailSettingsSchema = new Schema<IEmailSettings>(
+  {
+    receive_email_notification: { type: Boolean, default: false },
+    multiple_recipients: { type: multipleRecipientsSchema, default: () => ({ isActive: false, emails: [] }) },
+    reply_to: {
+      type: replyToSchema,
+      default: () => ({
+        automatic_first_email_field: false,
+        custom_email: { isActive: false, address: "" },
+      }),
+    },
+    email_subject: { type: String, default: "" },
+    email_body: { type: String, default: "" },
+  },
+  subDoc
+);
+
+/* -------------------------------------------------------------------------- */
+/* Form settings (access) sub-schemas                                          */
+/* -------------------------------------------------------------------------- */
+
+const closeFormByDateSchema = new Schema<ICloseFormByDate>(
+  {
+    isActive: { type: Boolean, default: false },
+    date: { type: Date, default: null },
+  },
+  subDoc
+);
+
+const closeFormBySubmissionsSchema = new Schema<ICloseFormBySubmissions>(
+  {
+    isActive: { type: Boolean, default: false },
+    submissions: { type: Number, default: 0, min: 0 },
+  },
+  subDoc
+);
+
+const autoRefreshInactivitySchema = new Schema<IAutoRefreshInactivity>(
+  {
+    isActive: { type: Boolean, default: false },
+    minutes: { type: Number, default: 5, min: 1 },
+  },
+  subDoc
+);
+
+const responseLimitSchema = new Schema<IResponseLimit>(
+  {
+    type: { type: String, enum: responseLimitTypes, default: "single" },
+    count: { type: Number, default: 1, min: 1 },
+    period: { type: String, enum: responseLimitPeriods, default: "lifetime" },
+  },
+  subDoc
+);
+
+const accessSettingsSchema = new Schema<IAccessSettings>(
+  {
+    close_form: { type: Boolean, default: false },
+    close_form_by_date: {
+      type: closeFormByDateSchema,
+      default: () => ({ isActive: false, date: null }),
+    },
+    close_form_by_submissions: {
+      type: closeFormBySubmissionsSchema,
+      default: () => ({ isActive: false, submissions: 0 }),
+    },
+    auto_refresh_inactivity: {
+      type: autoRefreshInactivitySchema,
+      default: () => ({ isActive: false, minutes: 5 }),
+    },
+    preventDuplicateSubmissions: { type: Boolean, default: false },
+    detectionMethod: {
+      type: String,
+      enum: detectionMethods,
+      default: "cookie_ip",
+    },
+    responseLimit: {
+      type: responseLimitSchema,
+      default: () => ({ type: "single", count: 1, period: "lifetime" }),
+    },
+  },
+  subDoc
+);
+
+/* -------------------------------------------------------------------------- */
+/* Form settings (hidden fields / variables) sub-schemas + exported schema     */
+/* -------------------------------------------------------------------------- */
+
+const hiddenFieldSchema = new Schema<IHiddenField>(
+  {
+    key: { type: String, default: "" },
+    value: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const hiddenFieldsSettingsSchema = new Schema<IHiddenFieldsSettings>(
+  {
+    enabled: { type: Boolean, default: false },
+    fields: { type: [hiddenFieldSchema], default: [] },
+  },
+  subDoc
+);
+
+const variableSchema = new Schema<IVariable>(
+  {
+    name: { type: String, required: true, trim: true },
+    type: { type: String, enum: ["text", "number"], required: true },
+    value: { type: Schema.Types.Mixed, default: "" },
+  },
+  subDoc
+);
+
+/**
+ * Exported so `FormVersion` snapshots share the exact same shape and defaults
+ * as the live `Form` document.
+ */
+export const formSettingsSchema = new Schema<IFormSettings>(
+  {
+    oneQuestionAtATime: { type: Boolean, default: true },
+    showProgressBar: { type: Boolean, default: true },
+    allowMultipleSubmissions: { type: Boolean, default: true },
+    requireLogin: { type: Boolean, default: false },
+    collectIP: { type: Boolean, default: false },
+
+    general: { type: generalSettingsSchema, default: undefined },
+    emailSettings: { type: formEmailSettingsSchema, default: undefined },
+    access: { type: accessSettingsSchema, default: undefined },
+    hiddenFields: { type: hiddenFieldsSettingsSchema, default: undefined },
+    variables: {
+      type: [variableSchema],
+      default: () => DEFAULT_FORM_VARIABLES.map((v) => ({ ...v })),
+    },
+  },
+  subDoc
+);
+
+/**
+ * Complete defaults for a freshly created form/version. Kept in one place so
+ * the Form document, the FormVersion snapshot and the API responses always
+ * agree on the shape.
+ */
+export const buildDefaultFormSettings = (): IFormSettings => ({
+  oneQuestionAtATime: true,
+  showProgressBar: true,
+  allowMultipleSubmissions: true,
+  requireLogin: false,
+  collectIP: false,
+
+  general: {
+    show_progress_bar: true,
+    initial_loader: true,
+    navigation_arrows: true,
+    refill_link: { isActive: false, link: "" },
+    show_powered_by_company_name: true,
+    anonymous_survey: false,
+  },
+
+  emailSettings: {
+    receive_email_notification: false,
+    multiple_recipients: { isActive: false, emails: [] },
+    reply_to: {
+      automatic_first_email_field: false,
+      custom_email: { isActive: false, address: "" },
+    },
+    email_subject: "",
+    email_body: "",
+  },
+
+  access: {
+    close_form: false,
+    close_form_by_date: { isActive: false, date: null },
+    close_form_by_submissions: { isActive: false, submissions: 0 },
+    auto_refresh_inactivity: { isActive: false, minutes: 5 },
+    preventDuplicateSubmissions: false,
+    detectionMethod: "cookie_ip",
+    responseLimit: { type: "single", count: 1, period: "lifetime" },
+  },
+
+  hiddenFields: { enabled: false, fields: [] },
+  variables: DEFAULT_FORM_VARIABLES.map((v) => ({ ...v })),
+});
+
+/** Recursively turns Mongoose documents/sub-documents into plain objects. */
+const toPlainObject = (value: any): any => {
+  if (Array.isArray(value)) return value.map(toPlainObject);
+  if (value && typeof value.toObject === "function") return value.toObject();
+  return value;
+};
+
+/**
+ * Ensures the default variables (`score`, `price`) are always available:
+ * defaults are inserted first, then stored variables with the same name
+ * override them, and extra custom variables are appended.
+ */
+export const resolveVariableDefaults = (stored?: any): IVariable[] => {
+  const byName = new Map<string, IVariable>();
+  for (const variable of DEFAULT_FORM_VARIABLES) {
+    byName.set(variable.name, { ...variable });
+  }
+  for (const item of toPlainObject(stored ?? [])) {
+    if (item && typeof item === "object" && typeof item.name === "string") {
+      byName.set(item.name, item);
+    }
+  }
+  return Array.from(byName.values());
+};
+
+/**
+ * Fills any missing group with its defaults so callers always receive a
+ * complete, plain settings object — even when the stored value is a Mongoose
+ * sub-document (a fresh `FormVersion` document) or a legacy document created
+ * before a group existed. Never serializes Mongoose internals (`$__`, `_doc`,
+ * `$isNew`, `$__parent`, ...).
+ */
+export const normalizeFormSettings = (stored: any): IFormSettings => {
+  const defaults = buildDefaultFormSettings();
+  const raw = toPlainObject(stored);
+  if (!raw || typeof raw !== "object") return defaults;
+
+  const mergeGroup = (group: keyof IFormSettings) => {
+    const storedGroup = toPlainObject(raw[group]);
+    const defaultGroup = toPlainObject(defaults[group]);
+    if (!storedGroup || typeof storedGroup !== "object") return defaultGroup;
+    return { ...defaultGroup, ...storedGroup };
+  };
+
+  return {
+    ...defaults,
+    ...raw,
+    general: mergeGroup("general"),
+    emailSettings: mergeGroup("emailSettings"),
+    access: mergeGroup("access"),
+    hiddenFields: mergeGroup("hiddenFields"),
+    variables: resolveVariableDefaults(raw.variables),
+  };
+};
 
 const emailSettingsSchema = new Schema<IEmailPageSettings>(
   {
@@ -709,13 +1127,7 @@ const formSchema = new Schema<IForm>(
 
     theme: { type: formThemeSchema, default: () => ({}) },
 
-    settings: {
-      oneQuestionAtATime: { type: Boolean, default: true },
-      showProgressBar: { type: Boolean, default: true },
-      allowMultipleSubmissions: { type: Boolean, default: true },
-      requireLogin: { type: Boolean, default: false },
-      collectIP: { type: Boolean, default: false },
-    },
+    settings: { type: formSettingsSchema, default: () => buildDefaultFormSettings() },
 
     pages: [formPageSchema],
     endPages: [endPageSchema],

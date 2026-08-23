@@ -1,17 +1,19 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { formThemeSchema, IEndPage, IFormPage, IFormTheme } from "./Form";
+import {
+  formSettingsSchema,
+  formThemeSchema,
+  buildDefaultFormSettings,
+  IEndPage,
+  IFormPage,
+  IFormSettings,
+  IFormTheme,
+} from "./Form";
 import { IUser } from "./User";
 
 export interface IFormVersionSchema {
   pages: IFormPage[];
   endPages?: IEndPage[];
-  settings: {
-    oneQuestionAtATime: boolean;
-    showProgressBar: boolean;
-    allowMultipleSubmissions: boolean;
-    requireLogin: boolean;
-    collectIP: boolean;
-  };
+  settings: IFormSettings;
   theme: IFormTheme;
 }
 
@@ -30,13 +32,7 @@ const formVersionSchema = new Schema<IFormVersion>(
     formSchema: {
       pages: { type: Array, default: [] },
       endPages: { type: Array, default: [] },
-      settings: {
-        oneQuestionAtATime: { type: Boolean, default: true },
-        showProgressBar: { type: Boolean, default: true },
-        allowMultipleSubmissions: { type: Boolean, default: true },
-        requireLogin: { type: Boolean, default: false },
-        collectIP: { type: Boolean, default: false },
-      },
+      settings: { type: formSettingsSchema, default: () => buildDefaultFormSettings() },
       theme: { type: formThemeSchema, default: () => ({}) },
     },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

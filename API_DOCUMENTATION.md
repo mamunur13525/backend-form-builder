@@ -1476,7 +1476,24 @@ Get a published form by slug (public, no auth).
     "slug": "customer-feedback-form",
     "status": "published",
     "theme": { "primaryColor": "#000000", "backgroundColor": "#ffffff", "textColor": "#111111" },
-    "settings": { "oneQuestionAtATime": true, "showProgressBar": true, "allowMultipleSubmissions": true, "requireLogin": false, "collectIP": false },
+    "settings": {
+      "oneQuestionAtATime": true,
+      "showProgressBar": true,
+      "allowMultipleSubmissions": true,
+      "requireLogin": false,
+      "general": {
+        "show_progress_bar": true,
+        "initial_loader": true,
+        "navigation_arrows": true,
+        "refill_link": { "isActive": false, "link": "" },
+        "show_powered_by_company_name": true,
+        "anonymous_survey": false
+      },
+      "variables": [
+        { "name": "score", "type": "number", "value": 0 },
+        { "name": "price", "type": "number", "value": 0 }
+      ]
+    },
     "createdBy": "65f1a2b3c4d5e6f7a8b9c0d1",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
@@ -1496,7 +1513,24 @@ Get form schema with pages (public, no auth).
     "form": {
       "id": "65f1a2b3c4d5e6f7a8b9c0d2",
       "title": "Customer Feedback Form",
-      "settings": { "oneQuestionAtATime": true, "showProgressBar": true, "allowMultipleSubmissions": true, "requireLogin": false, "collectIP": false }
+      "settings": {
+        "oneQuestionAtATime": true,
+        "showProgressBar": true,
+        "allowMultipleSubmissions": true,
+        "requireLogin": false,
+        "general": {
+          "show_progress_bar": true,
+          "initial_loader": true,
+          "navigation_arrows": true,
+          "refill_link": { "isActive": false, "link": "" },
+          "show_powered_by_company_name": true,
+          "anonymous_survey": false
+        },
+        "variables": [
+          { "name": "score", "type": "number", "value": 0 },
+          { "name": "price", "type": "number", "value": 0 }
+        ]
+      }
     },
     "pages": [ { ...page object... } ]
   }

@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
-import { Form, IForm } from "../../models/Form";
+import {
+  Form,
+  IForm,
+  buildDefaultFormSettings,
+} from "../../models/Form";
 import { FormVersion, IFormVersion } from "../../models/FormVersion";
 import { formStatus } from "../../constants/status";
 import { buildFormTheme } from "./form.theme";
@@ -20,13 +24,7 @@ export const createInitialVersion = async (
     formSchema: {
       pages: initialData?.pages || [],
       endPages: initialData?.endPages || [],
-      settings: initialData?.settings || {
-        oneQuestionAtATime: true,
-        showProgressBar: true,
-        allowMultipleSubmissions: true,
-        requireLogin: false,
-        collectIP: false,
-      },
+      settings: initialData?.settings || buildDefaultFormSettings(),
       theme: buildFormTheme(initialData?.theme),
     },
     createdBy,
