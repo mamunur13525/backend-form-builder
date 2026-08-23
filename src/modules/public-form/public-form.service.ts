@@ -101,7 +101,6 @@ export const getFormSchema = async (slugOrId: string): Promise<any> => {
     .map(({ logic, ...rest }: any) => rest);
 
   const endPages = (version.formSchema.endPages || [])
-    .filter((ep: any) => ep.isActive)
     .sort((a: any, b: any) => a.order - b.order);
 
   return {
@@ -145,7 +144,6 @@ export const getFormPreview = async (slugOrId: string): Promise<any> => {
         .filter((f: any) => f.isActive)
         .sort((a: any, b: any) => a.order - b.order);
       endPages = (version.formSchema.endPages || [])
-        .filter((ep: any) => ep.isActive)
         .sort((a: any, b: any) => a.order - b.order);
       theme = version.formSchema.theme;
       settings = version.formSchema.settings;

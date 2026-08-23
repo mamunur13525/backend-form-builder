@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+import { nanoid } from "nanoid";
 import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
 import { generateUniqueSlug } from "../../utils/slug";
@@ -7,6 +9,8 @@ import { FormVersion } from "../../models/FormVersion";
 import { Form } from "../../models/Form";
 import { createInitialVersion, ensureDraftVersion } from "./version.helper";
 import { buildFormTheme } from "./form.theme";
+import { buildPageSettings } from "../pages/page.settings";
+import { buildDefaultEndPageContent } from "../../constants/endPage";
 import {
   ClosedFormStatus,
   formStatus,
@@ -20,6 +24,70 @@ import {
   UpdateFormShareBody,
   FormResponse,
 } from "./form.types";
+
+const buildDefaultInitialPages = () => [
+  {
+    _id: new mongoose.Types.ObjectId(),
+    pageKey: `page_${nanoid(8)}`,
+    label: "Statement",
+    type: "statement" as const,
+    order: 1,
+    helperText: "",
+    placeholder: "",
+    required: false,
+    coverImage: undefined,
+    options: [],
+    validation: {},
+    settings: buildPageSettings("statement"),
+    appearance: {
+      width: "full" as const,
+      icon: "",
+      submitButtonText: "",
+      submitButtonColor: "",
+    },
+    isActive: true,
+    logic: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+const buildDefaultEndPages = () => {
+  const defaultContent = buildDefaultEndPageContent();
+  return [
+    {
+      _id: new mongoose.Types.ObjectId(),
+      key: `end_page_${nanoid(8)}`,
+      title: defaultContent.title,
+      helperText: defaultContent.helperText,
+      paragraph: defaultContent.paragraph,
+      button: {
+        text: defaultContent.button.text,
+        link: defaultContent.button.link,
+      },
+      redirect: {
+        isRedirect: false,
+        link: "",
+      },
+      alignment: "left" as const,
+      showConfetti: false,
+      socialShareButtons: false,
+      socialShareMessage: "",
+      socialShareMedia: {
+        facebook: false,
+        twitter: false,
+        linkedin: false,
+        whatsapp: false,
+      },
+      embed: {
+        url: "",
+      },
+      order: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+};
 
 const toFormResponse = async (form: any): Promise<FormResponse> => {
   let draftVersion: any = null;
@@ -65,17 +133,25 @@ export const createForm = async (
   data: CreateFormBody,
 ): Promise<FormResponse> => {
   const slug = await generateUniqueSlug(data.title, formRepo.checkSlugExists);
+  const defaultPages = buildDefaultInitialPages();
+  const defaultEndPages = buildDefaultEndPages();
+
   const form = await formRepo.createForm({
     title: data.title,
     slug,
     createdBy: userId,
   });
 
-  const v1 = await createInitialVersion(form._id, userId);
+  const v1 = await createInitialVersion(form._id, userId, {
+    pages: defaultPages,
+    endPages: defaultEndPages,
+  });
   form.draftVersionId = v1._id as any;
   form.publishedVersionId = null;
   form.hasUnpublishedChanges = false;
   form.status = formStatus.DRAFT;
+  form.pages = defaultPages as any;
+  form.endPages = defaultEndPages as any;
   await form.save();
 
   return toFormResponse(form);
@@ -169,6 +245,7 @@ export const duplicateForm = async (
 
   const v1 = await createInitialVersion(newForm._id, userId, {
     pages: JSON.parse(JSON.stringify(origVersion.formSchema.pages || [])),
+    endPages: JSON.parse(JSON.stringify(origVersion.formSchema.endPages || [])),
     settings: JSON.parse(JSON.stringify(origVersion.formSchema.settings || {})),
     theme: buildFormTheme(origVersion.formSchema.theme),
   });
@@ -177,6 +254,8 @@ export const duplicateForm = async (
   newForm.publishedVersionId = null;
   newForm.hasUnpublishedChanges = false;
   newForm.status = formStatus.DRAFT;
+  newForm.pages = JSON.parse(JSON.stringify(origVersion.formSchema.pages || []));
+  newForm.endPages = JSON.parse(JSON.stringify(origVersion.formSchema.endPages || []));
   await newForm.save();
 
   return toFormResponse(newForm);
@@ -215,6 +294,7 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
       form.draftVersionId = publishedVersion._id as any;
       form.hasUnpublishedChanges = false;
       form.pages = publishedVersion.formSchema.pages as any;
+      form.endPages = (publishedVersion.formSchema.endPages || []) as any;
       form.settings = publishedVersion.formSchema.settings as any;
       form.theme = publishedVersion.formSchema.theme as any;
       await form.save();
@@ -229,6 +309,7 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
 
   // Sync schema to Form document for backwards compatibility
   form.pages = draftVersion.formSchema.pages as any;
+  form.endPages = (draftVersion.formSchema.endPages || []) as any;
   form.settings = draftVersion.formSchema.settings as any;
   form.theme = draftVersion.formSchema.theme as any;
 

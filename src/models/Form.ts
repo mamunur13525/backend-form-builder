@@ -296,6 +296,7 @@ export interface IEndPage {
   _id?: mongoose.Types.ObjectId | string;
   key?: string;
   title: string;
+  helperText?: string;
   paragraph?: string;
   coverImage?: ICoverImage;
   embed?: IEndPageEmbed;
@@ -306,7 +307,6 @@ export interface IEndPage {
   socialShareButtons: boolean;
   socialShareMessage: string;
   socialShareMedia: IEndPageSocialShareMedia;
-  isActive: boolean;
   order: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -594,6 +594,7 @@ export const endPageSchema = new Schema<IEndPage>(
   {
     key: { type: String, default: "" },
     title: { type: String, default: "Thank you!" },
+    helperText: { type: String, default: "" },
     paragraph: { type: String, default: "" },
     coverImage: { type: coverImageSchema, default: undefined },
     embed: { type: endPageEmbedSchema, default: () => ({ url: "" }) },
@@ -618,7 +619,6 @@ export const endPageSchema = new Schema<IEndPage>(
         whatsapp: false,
       }),
     },
-    isActive: { type: Boolean, default: true },
     order: { type: Number, default: 1 },
   },
   { timestamps: true }
