@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import { nanoid } from "nanoid";
 import { env } from "../../config/env";
+import * as imagekit from "./imagekit.service";
 
 // Ensure upload directory exists
 const uploadDir = path.resolve(env.uploadDir);
@@ -35,6 +36,37 @@ export const uploadFile: RequestHandler = asyncHandler(async (req: Request, res:
     size: file.size,
     url: `/api/v1/uploads/${fileId}`,
   }, "File uploaded successfully", httpStatus.CREATED);
+});
+
+/**
+ * Upload an image to ImageKit and return its CDN URL. Used by the feedback
+ * board's "Give feedback" composer; the image itself is stored on ImageKit,
+ * not on local disk.
+ */
+export const uploadImage: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  if (!req.file) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "No image uploaded");
+  }
+
+  const file = req.file;
+  const result = await imagekit.uploadImageToImageKit(
+    file.buffer,
+    file.originalname,
+    file.mimetype
+  );
+
+  sendSuccess(
+    res,
+    {
+      url: result.url,
+      thumbnailUrl: result.thumbnailUrl,
+      fileId: result.fileId,
+      width: result.width,
+      height: result.height,
+    },
+    "Image uploaded successfully",
+    httpStatus.CREATED
+  );
 });
 
 export const getFile: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {

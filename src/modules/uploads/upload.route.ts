@@ -27,7 +27,24 @@ const upload = multer({
 
 const router: ExpressRouter = Router();
 
+// Image-only uploader for the feedback composer (routed to ImageKit).
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: env.maxFileSize },
+  fileFilter: (_req, file, cb) => {
+    const allowedImageMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (allowedImageMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
+
 router.post("/", authenticate, upload.single("file"), uploadController.uploadFile);
+// ImageKit-backed image upload — must be declared before the `/:fileId` GET so
+// the literal path is never mistaken for a file id.
+router.post("/image", authenticate, imageUpload.single("file"), uploadController.uploadImage);
 router.get("/:fileId", uploadController.getFile);
 router.delete("/:fileId", authenticate, uploadController.deleteFile);
 

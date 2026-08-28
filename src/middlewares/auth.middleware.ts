@@ -37,6 +37,39 @@ export const authenticate: RequestHandler = asyncHandler(
   }
 );
 
+/**
+ * Attaches `req.user` when a valid Bearer token is present, but never rejects
+ * the request when the token is missing or invalid. Use on endpoints that are
+ * public yet want to personalise the response for signed-in users (e.g. the
+ * feedback list needs to know whether the current viewer has upvoted a post).
+ */
+export const optionalAuthenticate: RequestHandler = asyncHandler(
+  async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      next();
+      return;
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    try {
+      const decoded = jwt.verify(token, env.jwtSecret) as JwtPayload;
+      req.user = {
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+        name: decoded.name,
+      };
+    } catch {
+      // Ignore an invalid/expired token — treat the request as anonymous.
+    }
+
+    next();
+  }
+);
+
 export const authorize = (...roles: string[]) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {

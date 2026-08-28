@@ -9,6 +9,22 @@ interface ValidationSchemas {
   params?: ZodTypeAny;
 }
 
+/**
+ * Express 5 exposes `req.query` (and `req.params`) as getter-only accessor
+ * properties, so a plain `req.query = ...` assignment throws
+ * "Cannot set property query of #<IncomingMessage> which has only a getter".
+ * Redefining the property as an own writable value shadows the getter, which
+ * lets us persist Zod's coerced/defaulted output for downstream handlers.
+ */
+const setRequestProp = (req: Request, key: "query" | "params", value: unknown): void => {
+  Object.defineProperty(req, key, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
+};
+
 export const validate = (schemas: ValidationSchemas) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     try {
@@ -16,10 +32,10 @@ export const validate = (schemas: ValidationSchemas) => {
         req.body = schemas.body.parse(req.body);
       }
       if (schemas.query) {
-        req.query = schemas.query.parse(req.query) as any;
+        setRequestProp(req, "query", schemas.query.parse(req.query));
       }
       if (schemas.params) {
-        req.params = schemas.params.parse(req.params) as any;
+        setRequestProp(req, "params", schemas.params.parse(req.params));
       }
       next();
     } catch (error: any) {

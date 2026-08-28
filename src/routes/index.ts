@@ -14,6 +14,8 @@ import settingsRoutes from "../modules/settings/settings.route";
 import uploadRoutes from "../modules/uploads/upload.route";
 import notificationRoutes from "../modules/notifications/notification.route";
 import workspaceRoutes from "../modules/workspaces/workspace.route";
+import feedbackRoutes from "../modules/feedback/feedback.route";
+import updateRoutes from "../modules/updates/update.route";
 
 import { getPublicForm } from "../modules/public-form/public-form.controller";
 
@@ -38,5 +40,7 @@ router.use(`${apiPrefix}/dashboard`, dashboardRoutes);
 router.use(`${apiPrefix}/uploads`, uploadRoutes);
 router.use(`${apiPrefix}/notifications`, notificationRoutes);
 router.use(`${apiPrefix}/workspaces`, workspaceRoutes);
+router.use(`${apiPrefix}/feedback`, feedbackRoutes);
+router.use(`${apiPrefix}/updates`, updateRoutes);
 
 export default router;

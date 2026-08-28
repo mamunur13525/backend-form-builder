@@ -21,4 +21,10 @@ export const env = {
   rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW || "15", 10), // minutes
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  // ImageKit — server-side upload via the REST API. Only the private key is
+  // strictly required for uploading; the public key / URL endpoint are kept for
+  // completeness (client SDK, signed URLs, transformations).
+  imagekitPrivateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
+  imagekitPublicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
+  imagekitUrlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || "",
 } as const;

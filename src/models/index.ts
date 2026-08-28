@@ -42,3 +42,12 @@ export type { IFormShare } from "./FormShare";
 
 export { FormVersion } from "./FormVersion";
 export type { IFormVersion, IFormVersionSchema } from "./FormVersion";
+
+export { Feedback, FEEDBACK_STATUSES } from "./Feedback";
+export type { IFeedback, FeedbackStatus } from "./Feedback";
+
+export { FeedbackComment } from "./Comment";
+export type { IFeedbackComment } from "./Comment";
+
+export { Update, UPDATE_COVERS } from "./Update";
+export type { IUpdate, IUpdateBlock, ITextRun, UpdateCover } from "./Update";

@@ -1941,6 +1941,37 @@ Get/download a file (public, no auth).
 
 **Response:** Binary file content with appropriate Content-Type header.
 
+### POST /uploads/image
+Upload an image to ImageKit and get back a hosted URL. Used by the feedback board's "give feedback" modal to attach a screenshot to a post. The file is streamed to ImageKit server-side (never stored locally) and the CDN URL is returned for the client to persist as `imageUrl` on the post.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Form Data:**
+```
+file: <binary image data>
+```
+
+**Allowed file types:** jpg, jpeg, png, gif, webp (images only). Max size is governed by `MAX_FILE_SIZE`.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Image uploaded successfully",
+  "data": {
+    "url": "https://ik.imagekit.io/your_id/feedback/screenshot_ab12cd.png",
+    "thumbnailUrl": "https://ik.imagekit.io/your_id/tr:n-ik_ml_thumbnail/feedback/screenshot_ab12cd.png",
+    "fileId": "6634f0a1c2d3e4f5a6b7c8d9",
+    "width": 1280,
+    "height": 720
+  }
+}
+```
+
+**Errors:** `400` if no image is sent or the file type is rejected; `500` if the server is missing `IMAGEKIT_PRIVATE_KEY`; `502` if ImageKit is unreachable or returns an unexpected response.
+
+**Configuration:** Requires `IMAGEKIT_PRIVATE_KEY` in the server environment (`IMAGEKIT_PUBLIC_KEY` / `IMAGEKIT_URL_ENDPOINT` are optional, kept for client-side SDK / signed URLs).
+
 ### DELETE /uploads/:fileId
 Delete a file.
 
@@ -2200,6 +2231,315 @@ Remove a member from a workspace.
 
 ---
 
+## Feedback Endpoints
+
+A public feedback board (Featurebase/Canny-style). List and detail reads are public; when a valid `Authorization` header is sent the response is personalised (`hasUpvoted`). Creating posts, upvoting, and commenting require authentication.
+
+### GET /feedback/boards
+Get the list of feedback boards shown in the sidebar. Public.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Boards retrieved successfully",
+  "data": [
+    { "id": "feature-requests", "name": "Feature Requests", "color": "#22c55e" }
+  ]
+}
+```
+
+### GET /feedback
+List feedback posts. Public, cursor-paginated. Optional auth personalises `hasUpvoted`.
+
+**Headers (optional):** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `cursor` | number | `1` | 1-based page number |
+| `order` | string | `trending` | `trending` \| `top` \| `newest` |
+| `limit` | number | `10` | Page size (1–100) |
+| `status` | string | — | Comma-separated statuses, e.g. `planned,in_progress` |
+| `board` | string | — | Board id filter |
+| `q` | string | — | Search in title/description |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Feedback retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": "65f1a2b3c4d5e6f7a8b9c0d1",
+        "slug": "builder-on-mobile",
+        "title": "Builder on mobile",
+        "description": "Currently the builder isn't available on small screens…",
+        "imageUrl": "https://ik.imagekit.io/your_id/feedback/mobile-mockup_ab12.png",
+        "status": "planned",
+        "boardId": "feature-requests",
+        "author": { "id": "…", "name": "Abhishek", "initials": "A", "color": "#fcd9c8", "isAdmin": true },
+        "upvotes": 27,
+        "commentCount": 4,
+        "createdAt": "2026-04-18T09:30:00.000Z",
+        "hasUpvoted": false,
+        "commenters": [ { "id": "…", "name": "Mario H", "initials": "MH", "color": "#dbeafe" } ]
+      }
+    ],
+    "nextCursor": 2,
+    "total": 14
+  }
+}
+```
+
+### POST /feedback
+Create a feedback post. The author implicitly upvotes their own post.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "title": "Airtable integration",
+  "description": "Sync submissions to an Airtable base.",
+  "imageUrl": "https://ik.imagekit.io/your_id/feedback/screenshot_ab12.png",
+  "boardId": "feature-requests"
+}
+```
+`description` and `imageUrl` are optional. `imageUrl` should be a URL returned by `POST /uploads/image`.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Post created successfully",
+  "data": { "id": "…", "slug": "airtable-integration", "status": "pending", "upvotes": 1, "hasUpvoted": true, "...": "…" }
+}
+```
+
+### GET /feedback/:slug
+Get a single post by slug. Public; optional auth personalises `hasUpvoted`.
+
+**Headers (optional):** `Authorization: Bearer <token>`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Post retrieved successfully",
+  "data": { "id": "…", "slug": "builder-on-mobile", "...": "…" }
+}
+```
+
+### PATCH /feedback/:id/upvote
+Toggle the current user's upvote on a post. Returns the updated post.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Upvote toggled successfully",
+  "data": { "id": "…", "upvotes": 28, "hasUpvoted": true, "...": "…" }
+}
+```
+
+### GET /feedback/:id/comments
+List comments for a post (pinned first, then newest). Public.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Comments retrieved successfully",
+  "data": [
+    {
+      "id": "…",
+      "postId": "…",
+      "author": { "id": "…", "name": "Abhishek", "initials": "A", "color": "#fcd9c8", "isAdmin": true },
+      "body": "You can already do this today with our Zapier connector — full guide here: ",
+      "link": { "url": "https://help.youform.com/make", "label": "https://help.youform.com/make..." },
+      "createdAt": "2026-05-03T10:00:00.000Z",
+      "likeCount": 11,
+      "dislikeCount": 1,
+      "pinned": true
+    }
+  ]
+}
+```
+
+### POST /feedback/:id/comments
+Add a comment to a post.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "body": "This would be a game changer for me.",
+  "link": { "url": "https://example.com", "label": "example.com" }
+}
+```
+`link` is optional.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Comment added successfully",
+  "data": { "id": "…", "postId": "…", "body": "This would be a game changer for me.", "likeCount": 0, "dislikeCount": 0, "...": "…" }
+}
+```
+
+### PATCH /feedback/comments/:commentId/like
+Increment a comment's like counter. Plain counter — each call adds one (no per-user state, no toggle). Returns the updated comment.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Comment liked",
+  "data": { "id": "…", "likeCount": 12, "dislikeCount": 1, "...": "…" }
+}
+```
+
+### PATCH /feedback/comments/:commentId/dislike
+Increment a comment's dislike counter. Same plain-counter semantics as like. Returns the updated comment.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Comment disliked",
+  "data": { "id": "…", "likeCount": 11, "dislikeCount": 2, "...": "…" }
+}
+```
+
+---
+
+## Updates Endpoints
+
+A product changelog. Reads are public; create/edit/delete are **admin only**.
+
+### GET /updates
+List all updates, newest first. Public.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Updates retrieved successfully",
+  "data": [
+    {
+      "id": "…",
+      "slug": "youform-mcp-is-here",
+      "title": "Youform MCP is here!",
+      "date": "2026-08-22T00:00:00.000Z",
+      "tags": ["new feature", "announcement"],
+      "cover": "mcp",
+      "excerpt": "Talk to your forms 🤖 …",
+      "author": { "id": "…", "name": "Abhishek", "initials": "A", "color": "#fcd9c8", "isAdmin": true },
+      "content": [
+        { "type": "paragraph", "runs": [ { "text": "Talk to your forms 🤖" } ] },
+        { "type": "readmore", "url": "https://help.youform.com/mcp", "label": "Read more here" }
+      ]
+    }
+  ]
+}
+```
+
+### GET /updates/activity
+Product-activity heatmap for the Updates sidebar (last 12 weeks). Public.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Product activity retrieved successfully",
+  "data": { "weeks": [1, 0, 2, 0, 1, 0, 3, 1, 0, 2, 0, 1], "completed": 11 }
+}
+```
+`weeks` is oldest-first; `completed` is the number of updates shipped in the window.
+
+### GET /updates/:slug
+Get a single update by slug. Public.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Update retrieved successfully",
+  "data": { "id": "…", "slug": "youform-mcp-is-here", "...": "…" }
+}
+```
+
+### POST /updates
+Create an update. **Admin only.**
+
+**Headers:** `Authorization: Bearer <token>` (role `admin`)
+
+**Request Body:**
+```json
+{
+  "title": "New integrations page",
+  "date": "2026-08-21T00:00:00.000Z",
+  "tags": ["improvement"],
+  "cover": "integrations",
+  "excerpt": "We revamped the integrations page…",
+  "content": [
+    { "type": "paragraph", "runs": [ { "text": "A cleaner layout and quicker setup." } ] }
+  ]
+}
+```
+Only `title` is required. `date` defaults to now; `cover` is one of `mcp` \| `sheets` \| `integrations`.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Update created successfully",
+  "data": { "id": "…", "slug": "new-integrations-page", "...": "…" }
+}
+```
+
+### PATCH /updates/:id
+Update an update. **Admin only.** Send `"cover": null` to clear the cover.
+
+**Headers:** `Authorization: Bearer <token>` (role `admin`)
+
+**Request Body:** any subset of the create fields.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Update saved successfully",
+  "data": { "id": "…", "...": "…" }
+}
+```
+
+### DELETE /updates/:id
+Delete an update. **Admin only.**
+
+**Headers:** `Authorization: Bearer <token>` (role `admin`)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Update deleted successfully",
+  "data": null
+}
+```
+
+---
+
 ## Data Models
 
 ### User
@@ -2308,6 +2648,74 @@ interface Workspace {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+}
+```
+
+### Feedback
+```typescript
+interface Feedback {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;         // optional attached image (ImageKit CDN URL)
+  status: "pending" | "reviewing" | "planned" | "in_progress" | "completed" | "closed";
+  boardId: string;
+  author: ObjectId;          // ref User
+  upvotedBy: ObjectId[];     // ref User; length drives upvoteCount
+  upvoteCount: number;
+  commentCount: number;
+  commenterIds: ObjectId[];  // distinct recent commenters (avatar stack)
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Serialized (API) shape** — `author`/`commenters` are projected to `{ id, name, initials, color, isAdmin? }`, `upvotes` = `upvoteCount`, and `hasUpvoted` is added for authenticated viewers.
+
+### FeedbackComment
+```typescript
+interface FeedbackComment {
+  id: string;
+  postId: ObjectId;          // ref Feedback
+  author: ObjectId;          // ref User
+  body: string;
+  link?: { url: string; label: string };
+  pinned: boolean;
+  likeCount: number;         // plain reaction counter (increment-only)
+  dislikeCount: number;      // plain reaction counter (increment-only)
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Update
+```typescript
+interface Update {
+  id: string;
+  slug: string;
+  title: string;
+  date: Date;
+  tags: string[];
+  cover?: "mcp" | "sheets" | "integrations";
+  excerpt: string;
+  author?: ObjectId;         // ref User
+  content: UpdateBlock[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+type UpdateBlock =
+  | { type: "paragraph"; runs: { text: string; bold?: boolean; link?: string; code?: boolean }[] }
+  | { type: "readmore"; url: string; label: string };
+```
+
+### Board
+```typescript
+interface Board {
+  id: string;    // e.g. "feature-requests"
+  name: string;  // e.g. "Feature Requests"
+  color: string; // sidebar dot colour, e.g. "#22c55e"
 }
 ```
 
