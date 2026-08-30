@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   logicActionTypes,
+  logicCalcOperations,
   logicCategories,
   logicCombinators,
   logicOperators,
@@ -21,6 +22,7 @@ const actionSchema = z
     action: z.enum(logicActionTypes),
     targetPageKey: z.string().optional(),
     variableName: z.string().optional(),
+    operation: z.enum(logicCalcOperations).optional(),
     expression: z.string().max(2000).optional(),
     value: z.any().optional(),
   })

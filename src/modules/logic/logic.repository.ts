@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 import {
   logicActionTypes,
+  logicCalcOperations,
   logicCategories,
   logicCombinators,
   logicOperators,
@@ -19,6 +20,7 @@ export interface IFormLogicAction {
   action: (typeof logicActionTypes)[number];
   targetPageKey?: string;
   variableName?: string;
+  operation?: (typeof logicCalcOperations)[number];
   expression?: string;
   value?: any;
 }
@@ -87,6 +89,7 @@ const formLogicSchema = new Schema<IFormLogic>(
         },
         targetPageKey: { type: String },
         variableName: { type: String },
+        operation: { type: String, enum: logicCalcOperations },
         expression: { type: String },
         value: { type: Schema.Types.Mixed },
       },

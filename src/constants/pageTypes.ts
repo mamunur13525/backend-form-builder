@@ -75,10 +75,24 @@ export const logicActionTypes = [
   "setVariable",
 ] as const;
 
+/**
+ * Arithmetic operations a calculation rule can apply to its target variable.
+ * The operand (a literal number or a `@number-variable`) is carried in the
+ * action's `value`. `set` overwrites; the rest fold onto the running value.
+ */
+export const logicCalcOperations = [
+  "set",
+  "add",
+  "subtract",
+  "multiply",
+  "divide",
+] as const;
+
 export type LogicCategory = (typeof logicCategories)[number];
 export type LogicSourceType = (typeof logicSourceTypes)[number];
 export type LogicCombinator = (typeof logicCombinators)[number];
 export type LogicActionType = (typeof logicActionTypes)[number];
+export type LogicCalcOperation = (typeof logicCalcOperations)[number];
 export type LogicOperator = (typeof logicOperators)[number];
 
 /* -------------------------------------------------------------------------- */

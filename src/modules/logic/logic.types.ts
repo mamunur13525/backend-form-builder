@@ -1,5 +1,6 @@
 import type {
   LogicActionType,
+  LogicCalcOperation,
   LogicCategory,
   LogicCombinator,
   LogicOperator,
@@ -22,9 +23,17 @@ export interface LogicActionBody {
   targetPageKey?: string;
   /** setVariable target. */
   variableName?: string;
-  /** Arithmetic expression for calculation rules (`@pageKey + @variable`). */
+  /**
+   * Arithmetic operation for calculation rules. `set` overwrites the target;
+   * `add`/`subtract`/`multiply`/`divide` fold `value` onto the running value.
+   */
+  operation?: LogicCalcOperation;
+  /** Legacy arithmetic expression for calculation rules (`@pageKey + @variable`). */
   expression?: string;
-  /** Static value for calculation rules without an expression. */
+  /**
+   * Operand for calculation rules: a literal number or a `@number-variable`
+   * when `operation` is set; the static value otherwise.
+   */
   value?: any;
 }
 
