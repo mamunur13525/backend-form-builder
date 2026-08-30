@@ -11,6 +11,7 @@ import { createInitialVersion, ensureDraftVersion } from "./version.helper";
 import { buildFormTheme } from "./form.theme";
 import { buildPageSettings } from "../pages/page.settings";
 import { buildDefaultEndPageContent } from "../../constants/endPage";
+import { findLogicsByFormId } from "../logic/logic.repository";
 import {
   ClosedFormStatus,
   formStatus,
@@ -89,7 +90,10 @@ const buildDefaultEndPages = () => {
   ];
 };
 
-const toFormResponse = async (form: any): Promise<FormResponse> => {
+const toFormResponse = async (
+  form: any,
+  withLogic = false
+): Promise<FormResponse> => {
   let draftVersion: any = null;
   if (form.draftVersionId) {
     draftVersion = await FormVersion.findById(form.draftVersionId).lean();
@@ -101,6 +105,11 @@ const toFormResponse = async (form: any): Promise<FormResponse> => {
   const pages = draftVersion?.formSchema?.pages || form.pages || [];
   const endPages = draftVersion?.formSchema?.endPages || form.endPages || [];
   const settings = normalizeFormSettings(draftVersion?.formSchema?.settings || form.settings);
+
+  // Logic rules live in their own collection; only single-form responses ask
+  // for them (list endpoints stay light — the frontend refetches rules per
+  // form anyway).
+  const logic = withLogic ? await findLogicsByFormId(String(form._id)) : undefined;
 
   return {
     id: form._id.toString(),
@@ -115,6 +124,7 @@ const toFormResponse = async (form: any): Promise<FormResponse> => {
     pages,
     endPages,
     settings,
+    ...(logic !== undefined ? { logic } : {}),
     createdBy: form.createdBy?._id?.toString() || form.createdBy?.toString(),
     updatedBy: form.updatedBy?.toString(),
     createdAt: form.createdAt,
@@ -163,7 +173,7 @@ export const getAllForms = async (
     formRepo.findAllForms(skip, limit, sort, query),
     formRepo.countForms(query),
   ]);
-  const formResponses = await Promise.all(forms.map(toFormResponse));
+  const formResponses = await Promise.all(forms.map((form) => toFormResponse(form)));
   return {
     forms: formResponses,
     meta: getPaginationMeta(total, Math.floor(skip / limit) + 1, limit),
@@ -175,7 +185,7 @@ export const getFormById = async (formId: string): Promise<FormResponse> => {
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
-  return toFormResponse(form);
+  return toFormResponse(form, true);
 };
 
 export const updateForm = async (

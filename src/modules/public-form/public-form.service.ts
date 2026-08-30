@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import { Form, normalizeFormSettings } from "../../models/Form";
 import { FormVersion } from "../../models/FormVersion";
 import { FormResponse } from "../../models/FormResponse";
+import { findLogicsByFormId } from "../logic/logic.repository";
+import { resolveFormLogic } from "../../utils/form-logic/evaluate";
 import {
   ClosedFormStatus,
   closedFormReason,
@@ -101,6 +103,9 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
     version: version.version,
     pages: version.formSchema.pages,
     endPages: version.formSchema.endPages || [],
+    // Logic rules (branching / display / calculations) the respondent client
+    // evaluates as answers are collected.
+    logic: await findLogicsByFormId(String(form._id)),
     theme: buildFormTheme(version.formSchema.theme),
     settings: buildPublicFormSettings(version.formSchema.settings),
     createdBy: form.createdBy,
@@ -170,6 +175,7 @@ export const getFormPreview = async (slugOrId: string): Promise<any> => {
   return {
     form: {
       ...form,
+      logic: await findLogicsByFormId(String(form._id)),
       theme: buildFormTheme(theme),
       settings: buildPublicFormSettings(settings),
     },
@@ -185,10 +191,42 @@ export const submitForm = async (
 ): Promise<any> => {
   const form = await findPublicForm(slugOrId);
 
+  // Recompute calculation variables server-side from the published version's
+  // logic rules so respondents cannot submit spoofed score/price values.
+  // Any failure here must never block the submission itself.
+  let computedVariables: { name: string; value: any }[] | undefined;
+  try {
+    const version = await FormVersion.findById(form.publishedVersionId).lean();
+    if (version) {
+      const pages = (version.formSchema.pages || []).filter(
+        (p: any) => p?.isActive && p.pageKey
+      );
+      const settings = normalizeFormSettings(version.formSchema.settings);
+      const rules = await findLogicsByFormId(String(form._id));
+      const answerMap: Record<string, unknown> = {};
+      for (const answer of data.answers ?? []) {
+        if (answer?.pageKey) answerMap[answer.pageKey] = answer.value;
+      }
+      const result = resolveFormLogic({
+        pages,
+        answers: answerMap,
+        variables: settings.variables,
+        rules,
+      });
+      const entries = Object.entries(result.computedVariables);
+      if (entries.length > 0) {
+        computedVariables = entries.map(([name, value]) => ({ name, value }));
+      }
+    }
+  } catch {
+    computedVariables = undefined;
+  }
+
   const response = await FormResponse.create({
     formId: form._id,
     formVersionId: form.publishedVersionId,
     answers: data.answers,
+    computedVariables,
     sessionId: data.sessionId || `session_${nanoid()}`,
     metadata: {
       ipAddress: metadata?.ip || "",

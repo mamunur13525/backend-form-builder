@@ -36,11 +36,50 @@ export const logicOperators = [
   "equals",
   "notEquals",
   "contains",
+  "notContains",
   "greaterThan",
+  "greaterThanOrEquals",
   "lessThan",
+  "lessThanOrEquals",
+  "isEmpty",
+  "isNotEmpty",
 ] as const;
 
+/** Legacy per-page logic actions (IFormPage.logic). Kept for backwards compat. */
 export const logicActions = ["show", "hide", "goToPage", "goToEnd"] as const;
+
+/* ------------------------------------------------------------------------- */
+/* Form-level logic rules (Logic Builder)                                     */
+/* ------------------------------------------------------------------------- */
+
+/** What a rule does at a glance — drives the Logic Builder sections. */
+export const logicCategories = [
+  "display",
+  "hidePage",
+  "branching",
+  "calculation",
+] as const;
+
+/** Where a condition reads its value from. */
+export const logicSourceTypes = ["page", "variable"] as const;
+
+/** How multiple conditions inside one rule combine. */
+export const logicCombinators = ["and", "or"] as const;
+
+/** Runtime effects a rule can trigger. */
+export const logicActionTypes = [
+  "showPage",
+  "hidePage",
+  "jumpToPage",
+  "goToEnd",
+  "setVariable",
+] as const;
+
+export type LogicCategory = (typeof logicCategories)[number];
+export type LogicSourceType = (typeof logicSourceTypes)[number];
+export type LogicCombinator = (typeof logicCombinators)[number];
+export type LogicActionType = (typeof logicActionTypes)[number];
+export type LogicOperator = (typeof logicOperators)[number];
 
 /* -------------------------------------------------------------------------- */
 /* Statement embeds                                                            */

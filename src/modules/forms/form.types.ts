@@ -76,6 +76,8 @@ export interface FormResponse {
   settings: IFormSettings;
   pages: {}[];
   endPages?: IEndPage[];
+  /** Form-level logic rules, only included when the endpoint asks for them. */
+  logic?: any[];
   createdBy: string;
   updatedBy?: string;
   createdAt: Date;

@@ -5,6 +5,7 @@ import { authenticate } from "../../middlewares/auth.middleware";
 import {
   createLogicSchema,
   updateLogicSchema,
+  replaceAllLogicSchema,
   logicIdParamSchema,
 } from "./logic.validation";
 
@@ -16,5 +17,6 @@ router.post("/:formId/logic", validate(createLogicSchema), logicController.creat
 router.get("/:formId/logic", logicController.getLogics);
 router.patch("/:formId/logic/:logicId", validate(updateLogicSchema), logicController.updateLogic);
 router.delete("/:formId/logic/:logicId", validate(logicIdParamSchema), logicController.deleteLogic);
+router.put("/:formId/logic", validate(replaceAllLogicSchema), logicController.replaceLogic);
 
 export default router;

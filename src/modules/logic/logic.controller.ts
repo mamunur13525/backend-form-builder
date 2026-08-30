@@ -23,3 +23,8 @@ export const deleteLogic: RequestHandler = asyncHandler(async (req: Request, res
   await logicService.deleteLogic(req.params.formId as string, req.params.logicId as string);
   sendSuccess(res, null, "Logic deleted successfully");
 });
+
+export const replaceLogic: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const rules = await logicService.replaceAllLogic(req.params.formId as string, req.body);
+  sendSuccess(res, rules, "Logic rules replaced successfully");
+});

@@ -13,6 +13,14 @@ export interface IFormResponse extends Document {
     type: string;
     value: any;
   }[];
+  /**
+   * Calculation variables recomputed server-side at submission time from the
+   * published version's logic rules (clients cannot spoof these values).
+   */
+  computedVariables?: {
+    name: string;
+    value: any;
+  }[];
   metadata: {
     ipAddress: string;
     userAgent: string;
@@ -41,6 +49,17 @@ const formResponseSchema = new Schema<IFormResponse>(
         value: { type: Schema.Types.Mixed, required: true },
       },
     ],
+
+    computedVariables: {
+      type: [
+        {
+          _id: false,
+          name: { type: String, required: true },
+          value: { type: Schema.Types.Mixed },
+        },
+      ],
+      default: undefined,
+    },
 
     metadata: {
       ipAddress: { type: String, default: "" },
