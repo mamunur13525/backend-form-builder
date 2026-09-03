@@ -39,6 +39,12 @@ export const checkSlugExists = async (slug: string): Promise<boolean> => {
   return !!form;
 };
 
+/** All form ids owned by a user — used by billing for response-limit checks. */
+export const findFormIdsByOwner = async (userId: string): Promise<string[]> => {
+  const ids = await Form.find({ createdBy: userId }).distinct("_id");
+  return ids.map((id) => String(id));
+};
+
 export const checkTitleExists = async (title: string, excludeFormId?: string): Promise<boolean> => {
   const query: Record<string, any> = { title };
   if (excludeFormId) {

@@ -12,6 +12,7 @@ import { buildFormTheme } from "./form.theme";
 import { buildPageSettings } from "../pages/page.settings";
 import { buildDefaultEndPageContent } from "../../constants/endPage";
 import { findLogicsByFormId } from "../logic/logic.repository";
+import * as billingService from "../billing/billing.service";
 import {
   ClosedFormStatus,
   formStatus,
@@ -136,6 +137,9 @@ export const createForm = async (
   userId: string,
   data: CreateFormBody,
 ): Promise<FormResponse> => {
+  // Enforce the account's plan form limit before creating anything.
+  await billingService.assertCanCreateForm(userId);
+
   const slug = await generateUniqueSlug(data.title, formRepo.checkSlugExists);
   const defaultPages = buildDefaultInitialPages();
   const defaultEndPages = buildDefaultEndPages();

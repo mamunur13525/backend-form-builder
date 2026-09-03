@@ -14,6 +14,7 @@ import {
   isClosedFormStatus,
 } from "../../constants/status";
 import { buildFormTheme } from "../forms/form.theme";
+import * as billingService from "../billing/billing.service";
 
 const buildFormLookupQuery = (slugOrId: string) => {
   if (mongoose.Types.ObjectId.isValid(slugOrId)) {
@@ -190,6 +191,10 @@ export const submitForm = async (
   metadata?: any
 ): Promise<any> => {
   const form = await findPublicForm(slugOrId);
+
+  // Enforce the form owner's plan response limit before accepting the
+  // submission (Free = 100/month, Pro = 10,000, Team = 100,000).
+  await billingService.assertCanAcceptResponse(String(form.createdBy));
 
   // Recompute calculation variables server-side from the published version's
   // logic rules so respondents cannot submit spoofed score/price values.

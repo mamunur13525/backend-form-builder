@@ -51,3 +51,18 @@ export const getResponseStats = async (formId: string): Promise<any> => {
 
   return { total, todayResponses, uniqueRespondents: uniqueRespondents.length };
 };
+
+/**
+ * Responses submitted across a set of forms since a date — used by billing
+ * for monthly plan-limit checks.
+ */
+export const countResponsesSince = async (
+  formIds: string[],
+  since: Date
+): Promise<number> => {
+  if (formIds.length === 0) return 0;
+  return FormResponse.countDocuments({
+    formId: { $in: formIds },
+    submittedAt: { $gte: since },
+  });
+};

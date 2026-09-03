@@ -17,8 +17,17 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.use(cookieParser());
 
-// Body parsing
-app.use(express.json({ limit: "10mb" }));
+// Body parsing. The `verify` callback stashes the raw bytes of every JSON
+// request on `req.rawBody` so webhook endpoints can verify HMAC signatures
+// over the exact payload the provider signed (Lemon Squeezy billing webhook).
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, _res, buf) => {
+      (req as any).rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 // Logging

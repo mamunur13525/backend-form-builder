@@ -21,6 +21,13 @@ export const env = {
   rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW || "15", 10), // minutes
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  // Lemon Squeezy — Merchant of Record payments (checkout, subscriptions,
+  // webhooks). https://docs.lemonsqueezy.com/api
+  lemonsqueezyApiKey: process.env.LEMONSQUEEZY_API_KEY || "",
+  lemonsqueezyStoreId: process.env.LEMONSQUEEZY_STORE_ID || "",
+  lemonsqueezyWebhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "",
+  lemonsqueezyApiBaseUrl:
+    process.env.LEMONSQUEEZY_API_BASE_URL || "https://api.lemonsqueezy.com/v1",
   // ImageKit — server-side upload via the REST API. Only the private key is
   // strictly required for uploading; the public key / URL endpoint are kept for
   // completeness (client SDK, signed URLs, transformations).
