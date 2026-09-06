@@ -2542,163 +2542,24 @@ Delete an update. **Admin only.**
 
 ## Billing Endpoints (Lemon Squeezy)
 
-Payments and subscriptions are powered by [Lemon Squeezy](https://www.lemonsqueezy.com) as Merchant of Record (checkout, global taxes and invoices are handled by Lemon Squeezy). Subscription state in the database is written **only by verified webhook events** — a successful checkout merely redirects the buyer back to the app.
+Payments and subscriptions are powered by [Lemon Squeezy](https://www.lemonsqueezy.com) as Merchant of Record. Plans: **Free**, **Pro** ($19/mo · $190/yr), **Team** ($49/mo · $490/yr). Subscription state is written **only by verified webhook events** — a successful checkout merely redirects the buyer back to the app.
 
-**Pricing**
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/billing/plans` | Public | Pricing page data |
+| GET | `/billing/subscription` | JWT | Current account subscription |
+| POST | `/billing/checkout` | JWT | Create hosted checkout URL |
+| POST | `/billing/change-plan` | JWT | Upgrade / downgrade |
+| POST | `/billing/cancel` | JWT | Cancel at period end |
+| POST | `/billing/resume` | JWT | Undo cancellation |
+| GET | `/billing/portal` | JWT | Customer portal URL |
+| POST | `/billing/webhook` | HMAC signature | Lemon Squeezy event receiver |
 
-| Plan | Monthly | Yearly | Forms | Responses / month |
-|---|---|---|---|---|
-| Free | $0 | $0 | 3 | 100 |
-| Pro | $19 | $190 | Unlimited | 10,000 |
-| Team | $49 | $490 | Unlimited | 100,000 |
+Plan gating: `POST /forms` enforces the plan's form limit and public submissions enforce the form owner's monthly response limit — both answer `403` with an upgrade message when exceeded.
 
-### GET /billing/plans
-Public pricing data for the pricing page. No authentication required.
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Plans retrieved successfully",
-  "data": {
-    "currency": "USD",
-    "plans": [
-      {
-        "id": "pro",
-        "name": "Pro",
-        "description": "For professionals who need unlimited forms and more responses.",
-        "features": ["Unlimited forms", "10,000 responses / month"],
-        "limits": { "forms": -1, "responsesPerMonth": 10000, "workspaceMembers": 1 },
-        "prices": { "monthly": 19, "yearly": 190 }
-      }
-    ]
-  }
-}
-```
-(`-1` means unlimited)
-
-### GET /billing/subscription
-Current account's subscription. A new account implicitly gets the `free` plan.
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Subscription retrieved successfully",
-  "data": {
-    "plan": "pro",
-    "interval": "monthly",
-    "status": "active",
-    "renewsAt": "2026-10-03T00:00:00.000Z",
-    "endsAt": null,
-    "cancelledAt": null,
-    "cancelReason": null,
-    "lastPaymentAt": "2026-09-03T01:00:00.000Z",
-    "testMode": false,
-    "createdAt": "…",
-    "updatedAt": "…"
-  }
-}
-```
-
-`status` is one of `free | active | on_trial | past_due | cancelled | expired | paused`. Access rules: `active` and `on_trial` always grant the plan; `past_due` keeps access during dunning; `cancelled` keeps access until `endsAt` passes.
-
-### POST /billing/checkout
-Creates a Lemon Squeezy checkout for a plan/interval and returns the hosted checkout URL. The buyer's account id is embedded in the checkout (`custom_data.user_id`) so webhooks can activate the right account. After purchase Lemon Squeezy redirects to `{FRONTEND_URL}/billing/success`.
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Request Body:**
-```json
-{ "plan": "pro", "interval": "monthly" }
-```
-(`plan`: `pro | team` — `interval`: `monthly | yearly`)
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "message": "Checkout created successfully",
-  "data": {
-    "checkoutUrl": "https://<store>.lemonsqueezy.com/checkout/custom/…",
-    "checkoutId": "…"
-  }
-}
-```
-
-**Errors:** `409` account already has an active subscription (use change-plan) · `422` validation failed · `503` billing not configured (`LEMONSQUEEZY_*` env vars missing)
+> 📖 **Full guide — dashboard setup, environment variables, request/response examples, webhook events, plan limits, testing & go-live:** [`docs/billing-api.md`](./docs/billing-api.md)
 
 ---
-
-
-### POST /billing/change-plan
-Upgrade/downgrade an active subscription (e.g. Pro monthly → Team yearly). Proration is handled by Lemon Squeezy.
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Request Body:** same shape as checkout.
-
-**Response (200):** the updated subscription object (see `GET /billing/subscription`).
-
-**Errors:** `404` no active subscription · `409` already on that plan, or subscription is cancelled (resume first) · `503` target plan not configured
-
-### POST /billing/cancel
-Cancels at the end of the current billing period. Paid access continues until `endsAt`.
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Response (200):** subscription with `status: "cancelled"`.
-
-### POST /billing/resume
-Reverts a scheduled cancellation before the period ends.
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Response (200):** subscription with `status: "active"`.
-
-### GET /billing/portal
-Returns the Lemon Squeezy customer portal URL (update payment method, invoices, receipts).
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Customer portal URL retrieved successfully",
-  "data": { "url": "https://<store>.lemonsqueezy.com/billing/…" }
-}
-```
-
-### POST /billing/webhook
-**Lemon Squeezy only — never call this endpoint directly.** Public (no JWT): authenticity is verified via the `X-Signature` header (HMAC-SHA256 over the raw body, timing-safe comparison). Configure it in the Lemon Squeezy dashboard (Settings → Webhooks) with the events: `order_created`, `subscription_created`, `subscription_updated`, `subscription_cancelled`, `subscription_paused`, `subscription_expired`, `subscription_payment_success`, `subscription_payment_failed`, `subscription_payment_recovered`, `subscription_payment_refunded`.
-
-Handled state changes:
-
-| Event | Effect |
-|---|---|
-| `subscription_created` / `subscription_updated` | Upsert subscription; plan + interval mapped from the LS variant id; status/renewal dates synced |
-| `subscription_payment_success` | `active` + `lastPaymentAt` updated |
-| `subscription_payment_failed` | `past_due` (grace access continues) |
-| `subscription_payment_recovered` | Back to `active` |
-| `subscription_payment_refunded` | `expired` (plan resets to free) |
-| `subscription_expired` | `expired`, plan resets to `free` |
-
-All handlers are idempotent (replayed events are safe) and the endpoint responds `200` quickly so Lemon Squeezy does not retry.
-
----
-
-
-## Plan Gating
-
-- `POST /forms` enforces the account's form limit (Free: 3, Pro/Team: unlimited) — returns `403` with an upgrade message when exceeded.
-- Public submissions (`POST /public/forms/:slug/submit`) enforce the form owner's monthly response limit (Free: 100, Pro: 10,000, Team: 100,000) — returns `403` when exceeded.
-- The `requirePlan(...)` middleware (`src/middlewares/plan.middleware.ts`) is available for gating future premium endpoints.
-
----
-
 
 
 ## Data Models
