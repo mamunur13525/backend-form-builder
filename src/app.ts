@@ -13,7 +13,6 @@ const app: Express = express();
 
 // Security middleware
 app.use(helmet());
-
 app.use(cors(corsOptions));
 app.use(cookieParser());
 

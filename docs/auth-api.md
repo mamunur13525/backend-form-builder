@@ -12,11 +12,11 @@ Frontend integration guide for auth endpoints.
 | Setting | Value |
 |---------|-------|
 | Content-Type | `application/json` |
-| CORS origin | `FRONTEND_URL` env var (default: `http://localhost:5173`) |
+| CORS origin | Origin from `FRONTEND_URL` (default: `http://localhost:5173`; a trailing slash is ignored) |
 | Max body size | 10 MB |
 | Health check | `GET /health` → `{ status, timestamp, uptime }` |
 
-> ⚠️ **CORS:** Backend `.env` must have `FRONTEND_URL` matching your dev origin exactly, or all requests fail preflight.
+> ⚠️ **CORS:** Backend `.env` must have `FRONTEND_URL` set to your frontend's origin (scheme, host, and port). A trailing slash is normalized; a different port or scheme will still fail preflight.
 
 ---
 
