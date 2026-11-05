@@ -109,3 +109,8 @@ export const updateVariables = async (
   formId: string,
   data: UpdateVariablesBody
 ): Promise<SettingsResult> => updateSection(formId, "variables", data.variables);
+
+export const updateIntegrations = async (
+  formId: string,
+  data: any
+): Promise<SettingsResult> => updateSection(formId, "integrations", data);

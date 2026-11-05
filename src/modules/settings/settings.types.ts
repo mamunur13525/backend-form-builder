@@ -12,7 +12,8 @@ export type SettingsSection =
   | "emailSettings"
   | "access"
   | "hiddenFields"
-  | "variables";
+  | "variables"
+  | "integrations";
 
 export interface UpdateGeneralSettingsBody {
   show_progress_bar?: boolean;

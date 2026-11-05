@@ -44,3 +44,10 @@ export const updateVariables: RequestHandler = asyncHandler(
     sendSuccess(res, result, "Variables updated successfully");
   }
 );
+
+export const updateIntegrations: RequestHandler = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const result = await settingsService.updateIntegrations(req.params.formId as string, req.body);
+    sendSuccess(res, result, "Integrations updated successfully");
+  }
+);

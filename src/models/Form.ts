@@ -199,6 +199,7 @@ export interface IFormSettings {
   access?: IAccessSettings;
   hiddenFields?: IHiddenFieldsSettings;
   variables?: IVariable[];
+  integrations?: Record<string, any>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -719,6 +720,7 @@ export const formSettingsSchema = new Schema<IFormSettings>(
       type: [variableSchema],
       default: () => DEFAULT_FORM_VARIABLES.map((v) => ({ ...v })),
     },
+    integrations: { type: Schema.Types.Mixed, default: () => ({}) },
   },
   subDoc
 );
@@ -821,6 +823,7 @@ export const normalizeFormSettings = (stored: any): IFormSettings => {
     access: mergeGroup("access"),
     hiddenFields: mergeGroup("hiddenFields"),
     variables: resolveVariableDefaults(raw.variables),
+    integrations: raw.integrations ?? {},
   };
 };
 

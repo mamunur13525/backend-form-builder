@@ -1,6 +1,7 @@
 import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
 import { nanoid } from "nanoid";
+import { dispatchServerIntegrations } from "./integration-dispatcher";
 import mongoose from "mongoose";
 import { Form, normalizeFormSettings } from "../../models/Form";
 import { FormVersion } from "../../models/FormVersion";
@@ -82,6 +83,7 @@ const findPublicFormWithVersion = async (slugOrId: string) => {
  */
 export const buildPublicFormSettings = (stored: any) => {
   const full = normalizeFormSettings(stored);
+  const ga = full.integrations?.["google-analytics"];
   return {
     oneQuestionAtATime: full.oneQuestionAtATime,
     showProgressBar: full.showProgressBar,
@@ -89,6 +91,14 @@ export const buildPublicFormSettings = (stored: any) => {
     requireLogin: full.requireLogin,
     general: full.general,
     variables: full.variables,
+    googleAnalytics: ga?.enabled && ga?.measurementId
+      ? {
+          measurementId: ga.measurementId,
+          trackFormViews: ga.trackFormViews ?? true,
+          trackStepChanges: ga.trackStepChanges ?? true,
+          trackSubmissions: ga.trackSubmissions ?? true,
+        }
+      : undefined,
   };
 };
 
@@ -239,6 +249,18 @@ export const submitForm = async (
       referrer: metadata?.referrer || "",
     },
     submittedAt: new Date(),
+  });
+
+  // Dispatch third-party integrations (Slack, Discord, Telegram, Zapier, etc.)
+  // Runs in background so it never slows down or blocks response to respondent
+  dispatchServerIntegrations({
+    form,
+    versionId: form.publishedVersionId,
+    submission: response,
+    answers: data.answers,
+    computedVariables,
+  }).catch((err) => {
+    console.error("Integration dispatch error:", err);
   });
 
   return {

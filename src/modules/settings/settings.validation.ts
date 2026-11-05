@@ -164,3 +164,8 @@ export const updateVariablesSchema = {
     .strict(),
   params: formIdParams,
 };
+
+export const updateIntegrationsSchema = {
+  body: z.record(z.string(), z.any()),
+  params: formIdParams,
+};

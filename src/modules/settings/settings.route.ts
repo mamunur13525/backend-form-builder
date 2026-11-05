@@ -9,6 +9,7 @@ import {
   updateGeneralSettingsSchema,
   updateHiddenFieldsSchema,
   updateVariablesSchema,
+  updateIntegrationsSchema,
 } from "./settings.validation";
 
 const router: ExpressRouter = Router();
@@ -23,5 +24,6 @@ router.patch("/:formId/settings/email", validate(updateEmailSettingsSchema), set
 router.patch("/:formId/settings/access", validate(updateAccessSettingsSchema), settingsController.updateAccessSettings);
 router.patch("/:formId/settings/hidden-fields", validate(updateHiddenFieldsSchema), settingsController.updateHiddenFields);
 router.patch("/:formId/settings/variables", validate(updateVariablesSchema), settingsController.updateVariables);
+router.patch("/:formId/settings/integrations", validate(updateIntegrationsSchema), settingsController.updateIntegrations);
 
 export default router;
