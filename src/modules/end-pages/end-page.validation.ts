@@ -6,6 +6,7 @@ const coverImageSchema = z.object({
   url: z.string().max(2000),
   fileId: z.string().max(100).optional(),
   alt: z.string().max(300).optional(),
+  layout: z.enum(["top", "bottom", "left", "right"]).optional(),
 });
 
 const embedSchema = z.object({

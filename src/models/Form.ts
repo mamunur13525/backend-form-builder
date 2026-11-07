@@ -55,6 +55,7 @@ export interface ICoverImage {
   url: string;
   fileId?: string;
   alt?: string;
+  layout?: "top" | "bottom" | "left" | "right";
 }
 
 export interface IPageOption {
@@ -480,6 +481,11 @@ const coverImageSchema = new Schema<ICoverImage>(
     url: { type: String, default: "" },
     fileId: { type: String, default: "" },
     alt: { type: String, default: "" },
+    layout: {
+      type: String,
+      enum: ["top", "bottom", "left", "right"],
+      default: "top",
+    },
   },
   subDoc
 );
