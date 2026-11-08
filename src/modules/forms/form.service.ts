@@ -27,32 +27,65 @@ import {
   FormResponse,
 } from "./form.types";
 
-const buildDefaultInitialPages = () => [
-  {
-    _id: new mongoose.Types.ObjectId(),
-    pageKey: `page_${nanoid(8)}`,
-    label: "Statement",
-    type: "statement" as const,
-    order: 1,
-    helperText: "",
-    placeholder: "",
-    required: false,
-    coverImage: undefined,
-    options: [],
-    validation: {},
-    settings: buildPageSettings("statement"),
-    appearance: {
-      width: "full" as const,
-      icon: "",
-      submitButtonText: "",
-      submitButtonColor: "",
+const buildDefaultInitialPages = () => {
+  const blockId = new mongoose.Types.ObjectId();
+  const blockKey = `block_${nanoid(8)}`;
+  return [
+    {
+      _id: new mongoose.Types.ObjectId(),
+      pageKey: `page_${nanoid(8)}`,
+      title: "Statement",
+      description: "",
+      label: "Statement",
+      type: "statement" as const,
+      order: 1,
+      helperText: "",
+      placeholder: "",
+      required: false,
+      coverImage: undefined,
+      options: [],
+      validation: {},
+      settings: buildPageSettings("statement"),
+      appearance: {
+        width: "full" as const,
+        icon: "",
+        submitButtonText: "",
+        submitButtonColor: "",
+      },
+      blocks: [
+        {
+          _id: blockId,
+          blockKey,
+          title: "Statement",
+          description: "",
+          label: "Statement",
+          helperText: "",
+          placeholder: "",
+          type: "statement" as const,
+          required: false,
+          order: 1,
+          coverImage: undefined,
+          options: [],
+          validation: {},
+          settings: buildPageSettings("statement"),
+          appearance: {
+            width: "full" as const,
+            icon: "",
+            submitButtonText: "",
+            submitButtonColor: "",
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      isActive: true,
+      logic: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
-    isActive: true,
-    logic: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+  ];
+};
 
 const buildDefaultEndPages = () => {
   const defaultContent = buildDefaultEndPageContent();

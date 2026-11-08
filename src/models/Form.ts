@@ -362,20 +362,63 @@ export interface IPageSettings {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Page                                                                      */
+/* Blocks & Pages                                                             */
 /* -------------------------------------------------------------------------- */
 
-export interface IFormPage {
-  pageKey: string;
-  label: string;
-  helperText: string;
-  placeholder: string;
+export interface IFormBlockValidation {
+  minLength?: number;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  pattern?: string;
+  message?: string;
+}
+
+export interface IFormBlockAppearance {
+  width?: "full" | "half";
+  icon?: string;
+  submitButtonText?: string;
+  submitButtonColor?: string;
+}
+
+export interface IFormBlock {
+  _id?: mongoose.Types.ObjectId | string;
+  blockKey: string;
+  questionKey?: string;
+  title: string;
+  description: string;
+  label?: string;
+  helperText?: string;
+  placeholder?: string;
   type: PageType;
-  required: boolean;
+  required?: boolean;
   order: number;
   coverImage?: ICoverImage;
-  options: IPageOption[];
-  validation: {
+  options?: IPageOption[];
+  validation?: IFormBlockValidation;
+  settings?: IPageSettings;
+  appearance?: IFormBlockAppearance;
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type IFormQuestion = IFormBlock;
+
+export interface IFormPage {
+  _id?: mongoose.Types.ObjectId | string;
+  pageKey: string;
+  title?: string;
+  description?: string;
+  label: string;
+  helperText: string;
+  placeholder?: string;
+  type?: PageType;
+  required?: boolean;
+  order: number;
+  coverImage?: ICoverImage;
+  options?: IPageOption[];
+  validation?: {
     /** longText: minimum characters. Blank means no limit. */
     minLength?: number;
     /** longText: maximum characters. Blank means no limit. */
@@ -387,23 +430,25 @@ export interface IFormPage {
     pattern?: string;
     message?: string;
   };
-  settings: IPageSettings;
-  logic: {
+  settings?: IPageSettings;
+  logic?: {
     whenPageKey?: string;
     operator?: "equals" | "notEquals" | "contains" | "greaterThan" | "lessThan";
     value?: any;
     action?: "show" | "hide" | "goToPage" | "goToEnd";
     targetPageKey?: string;
   }[];
-  appearance: {
-    width: "full" | "half";
-    icon: string;
+  appearance?: {
+    width?: "full" | "half";
+    icon?: string;
     submitButtonText?: string;
     submitButtonColor?: string;
   };
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  blocks?: IFormBlock[];
+  questions?: IFormBlock[];
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1055,10 +1100,13 @@ export const endPageSchema = new Schema<IEndPage>(
 /* Page + form schemas                                                       */
 /* -------------------------------------------------------------------------- */
 
-const formPageSchema = new Schema<IFormPage>(
+export const formBlockSchema = new Schema<IFormBlock>(
   {
-    pageKey: { type: String, required: true },
-    label: { type: String, required: true },
+    blockKey: { type: String, required: true },
+    questionKey: { type: String },
+    title: { type: String, default: "" },
+    description: { type: String, default: "" },
+    label: { type: String, default: "" },
     helperText: { type: String, default: "" },
     placeholder: { type: String, default: "" },
 
@@ -1066,6 +1114,57 @@ const formPageSchema = new Schema<IFormPage>(
       type: String,
       enum: pageTypes,
       required: true,
+      default: "shortText",
+    },
+
+    required: { type: Boolean, default: false },
+    order: { type: Number, required: true, default: 1 },
+
+    coverImage: { type: coverImageSchema, default: undefined },
+
+    options: [
+      {
+        label: { type: String },
+        value: { type: String },
+      },
+    ],
+
+    validation: {
+      minLength: { type: Number },
+      maxLength: { type: Number },
+      min: { type: Number },
+      max: { type: Number },
+      pattern: { type: String },
+      message: { type: String },
+    },
+
+    settings: { type: pageSettingsSchema, default: () => ({}) },
+
+    appearance: {
+      width: { type: String, enum: ["full", "half"], default: "full" },
+      icon: { type: String, default: "" },
+      submitButtonText: { type: String, default: "" },
+      submitButtonColor: { type: String, default: "" },
+    },
+
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+export const formPageSchema = new Schema<IFormPage>(
+  {
+    pageKey: { type: String, required: true },
+    title: { type: String, default: "" },
+    description: { type: String, default: "" },
+    label: { type: String, default: "" },
+    helperText: { type: String, default: "" },
+    placeholder: { type: String, default: "" },
+
+    type: {
+      type: String,
+      enum: pageTypes,
+      default: "statement",
     },
 
     required: { type: Boolean, default: false },
@@ -1114,10 +1213,15 @@ const formPageSchema = new Schema<IFormPage>(
       submitButtonColor: { type: String, default: "" },
     },
 
+    blocks: { type: [formBlockSchema], default: [] },
+    questions: { type: [formBlockSchema], default: [] },
+
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
+
+export const formQuestionSchema = formBlockSchema;
 
 const formSchema = new Schema<IForm>(
   {

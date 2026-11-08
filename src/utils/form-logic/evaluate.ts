@@ -20,7 +20,7 @@ export const JUMP_TO_END = "END" as const;
 
 export interface LogicEnginePage {
   pageKey: string;
-  type: string;
+  type?: string;
   options?: { label?: string; value?: string }[];
 }
 

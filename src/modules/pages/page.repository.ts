@@ -22,8 +22,10 @@ export const getDraftVersionForForm = async (formId: string) => {
 export const createPage = async (data: {
   formId: string;
   pageKey: string;
-  label: string;
-  type: string;
+  title?: string;
+  description?: string;
+  label?: string;
+  type?: string;
   order: number;
   helperText?: string;
   placeholder?: string;
@@ -33,17 +35,25 @@ export const createPage = async (data: {
   validation?: any;
   settings?: any;
   appearance?: any;
+  blocks?: any[];
 }): Promise<{ page: IFormPage; hasUnpublishedChanges: boolean }> => {
   const { form, draftVersion } = await getDraftVersionForForm(data.formId);
+
+  const title = data.title !== undefined ? data.title : (data.label || "");
+  const description = data.description !== undefined ? data.description : (data.helperText || "");
+  const label = data.label !== undefined ? data.label : title;
+  const helperText = data.helperText !== undefined ? data.helperText : description;
 
   const pageId = new mongoose.Types.ObjectId();
   const page: any = {
     _id: pageId,
     pageKey: data.pageKey,
-    label: data.label,
-    type: data.type,
+    title,
+    description,
+    label,
+    helperText,
+    type: data.type || "statement",
     order: data.order,
-    helperText: data.helperText || "",
     placeholder: data.placeholder || "",
     required: data.required || false,
     coverImage: data.coverImage || undefined,
@@ -51,6 +61,7 @@ export const createPage = async (data: {
     validation: data.validation || {},
     settings: data.settings || {},
     appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
+    blocks: data.blocks || [],
     isActive: true,
     logic: [],
     createdAt: new Date(),
@@ -112,6 +123,19 @@ export const updatePage = async (
   if (index === -1) return null;
 
   const targetPage = pages[index];
+  if (data.title !== undefined && data.label === undefined) {
+    data.label = data.title;
+  }
+  if (data.label !== undefined && data.title === undefined) {
+    data.title = data.label;
+  }
+  if (data.description !== undefined && data.helperText === undefined) {
+    data.helperText = data.description;
+  }
+  if (data.helperText !== undefined && data.description === undefined) {
+    data.description = data.helperText;
+  }
+
   Object.assign(targetPage, data, { updatedAt: new Date() });
 
   draftVersion.markModified("formSchema");

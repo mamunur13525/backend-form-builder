@@ -1023,20 +1023,27 @@ Delete page logic (set to empty array).
 
 ---
 
-## Form Blocks (Sections) Endpoints
+## Form Blocks (Fields & Sections) Endpoints
 
-### POST /forms/:formId/blocks
-Create a new block/section in a form.
+Blocks are embedded inside a page. A page can contain multiple blocks (e.g. `statement`, `shortText`, `longText`, `rating`, etc.). Every block has its own `title` and `description` (which can be empty strings `""`).
+
+### POST /forms/:formId/pages/:pageId/blocks (or POST /forms/:formId/blocks)
+Create a new block inside a page.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Request Body:**
 ```json
 {
-  "title": "Personal Information",
-  "type": "section"
+  "type": "shortText",
+  "title": "Full Name",
+  "description": "",
+  "placeholder": "John Doe",
+  "required": true
 }
 ```
+
+*Note: `title` and `description` can be empty strings if no header/description is needed.*
 
 **Response (201):**
 ```json
@@ -1044,19 +1051,28 @@ Create a new block/section in a form.
   "success": true,
   "message": "Block created successfully",
   "data": {
+    "_id": "65f1a2b3c4d5e6f7a8b9c0d6",
     "id": "65f1a2b3c4d5e6f7a8b9c0d6",
-    "formId": "65f1a2b3c4d5e6f7a8b9c0d2",
-    "title": "Personal Information",
-    "type": "section",
+    "blockKey": "block_abc12345",
+    "title": "Full Name",
+    "description": "",
+    "label": "Full Name",
+    "helperText": "",
+    "type": "shortText",
+    "required": true,
     "order": 1,
+    "options": [],
+    "validation": {},
+    "settings": {},
+    "appearance": { "width": "full", "icon": "" },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 }
 ```
 
-### GET /forms/:formId/blocks
-Get all blocks for a form.
+### GET /forms/:formId/pages/:pageId/blocks (or GET /forms/:formId/blocks)
+Get all blocks for a page (or all blocks in form if no `pageId` specified).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -1065,19 +1081,30 @@ Get all blocks for a form.
 {
   "success": true,
   "message": "Blocks retrieved successfully",
-  "data": [ { ...block object... } ]
+  "data": [
+    {
+      "_id": "65f1a2b3c4d5e6f7a8b9c0d6",
+      "id": "65f1a2b3c4d5e6f7a8b9c0d6",
+      "blockKey": "block_abc12345",
+      "title": "Full Name",
+      "description": "",
+      "type": "shortText",
+      "order": 1
+    }
+  ]
 }
 ```
 
-### PATCH /forms/:formId/blocks/:blockId
-Update a block.
+### PATCH /forms/:formId/pages/:pageId/blocks/:blockId (or PATCH /forms/:formId/blocks/:blockId)
+Update a block's title, description, type, required status, options, settings, etc.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Request Body:**
 ```json
 {
-  "title": "Updated Section Title"
+  "title": "",
+  "description": "Optional helper text only"
 }
 ```
 
@@ -1090,8 +1117,8 @@ Update a block.
 }
 ```
 
-### DELETE /forms/:formId/blocks/:blockId
-Delete a block.
+### DELETE /forms/:formId/pages/:pageId/blocks/:blockId (or DELETE /forms/:formId/blocks/:blockId)
+Delete a block from a page.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -1104,8 +1131,8 @@ Delete a block.
 }
 ```
 
-### PATCH /forms/:formId/blocks/reorder
-Reorder blocks in a form.
+### PATCH /forms/:formId/pages/:pageId/blocks/reorder (or PATCH /forms/:formId/blocks/reorder)
+Reorder blocks in a page.
 
 **Headers:** `Authorization: Bearer <token>`
 

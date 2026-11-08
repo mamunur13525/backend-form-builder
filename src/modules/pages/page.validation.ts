@@ -213,8 +213,10 @@ const appearanceSchema = z.object({
 export const createPageSchema = {
   body: z
     .object({
-      type: pageTypeEnum,
-      label: z.string().max(500),
+      title: z.string().max(500).optional(),
+      description: z.string().max(1000).optional(),
+      type: pageTypeEnum.optional(),
+      label: z.string().max(500).optional(),
       helperText: z.string().max(500).optional(),
       placeholder: z.string().max(200).optional(),
       required: z.boolean().optional(),
@@ -223,6 +225,7 @@ export const createPageSchema = {
       validation: validationSchema.optional(),
       settings: settingsSchema.optional(),
       appearance: appearanceSchema.optional(),
+      blocks: z.array(z.any()).optional(),
     })
     .strict(), // Prevent additional pages like 'order' from being passed
   params: z.object({
@@ -232,6 +235,8 @@ export const createPageSchema = {
 
 export const updatePageSchema = {
   body: z.object({
+    title: z.string().max(500).optional(),
+    description: z.string().max(1000).optional(),
     type: pageTypeEnum.optional(),
     label: z.string().max(500).optional(),
     helperText: z.string().max(500).optional(),
@@ -242,6 +247,7 @@ export const updatePageSchema = {
     validation: validationSchema.optional(),
     settings: settingsSchema.optional(),
     appearance: appearanceSchema.optional(),
+    blocks: z.array(z.any()).optional(),
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),

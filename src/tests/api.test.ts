@@ -17,12 +17,9 @@ describe("Typeform API Endpoints", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
-  });
-
-  afterEach(async () => {
     if (mongoose.connection.readyState === 1) {
       await mongoose.connection.dropDatabase();
+      await mongoose.connection.close();
     }
   });
 
