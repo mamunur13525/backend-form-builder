@@ -82,8 +82,8 @@ describe("Published Form Draft & Versioning System", () => {
     // 5. Public endpoint /f/:slug for published form returns V1 schema
     const pubRes = await api.get(`/f/${slug}`);
     expect(pubRes.status).toBe(200);
-    expect(pubRes.body.data.pages).toHaveLength(1);
-    expect(pubRes.body.data.pages[0].label).toBe("Your Name");
+    expect(pubRes.body.data.pages).toHaveLength(2);
+    expect(pubRes.body.data.pages[1].label).toBe("Your Name");
 
     // 6. Admin edits published form (adds a second question) -> Automatically clones V1 into V2 draft
     const addQ2Res = await api
@@ -101,16 +101,16 @@ describe("Published Form Draft & Versioning System", () => {
     expect(formAdminRes.body.data.publishedVersionId).toBe(v1Id);
     v2Id = formAdminRes.body.data.draftVersionId;
     expect(v2Id).not.toBe(v1Id); // Cloned into new version V2!
-    expect(formAdminRes.body.data.pages).toHaveLength(2); // Admin sees draft V2
+    expect(formAdminRes.body.data.pages).toHaveLength(3); // Admin sees draft V2
 
-    // 7. Public endpoint /f/:slug still returns V1 (1 page)! Respondents never see draft changes.
+    // 7. Public endpoint /f/:slug still returns V1 (2 pages)! Respondents never see draft changes.
     const pubResWhileDraft = await api.get(`/f/${slug}`);
     expect(pubResWhileDraft.status).toBe(200);
-    expect(pubResWhileDraft.body.data.pages).toHaveLength(1);
+    expect(pubResWhileDraft.body.data.pages).toHaveLength(2);
 
     // 8. Respondent submits response against published V1
     const subRes = await api.post(`/api/v1/public/forms/${slug}/submit`).send({
-      answers: [{ pageKey: pubResWhileDraft.body.data.pages[0].pageKey, label: "Your Name", type: "shortText", value: "Alice" }],
+      answers: [{ pageKey: pubResWhileDraft.body.data.pages[1].pageKey, label: "Your Name", type: "shortText", value: "Alice" }],
     });
     expect(subRes.status).toBe(200);
     expect(subRes.body.data.formVersionId).toBe(v1Id);
@@ -126,7 +126,7 @@ describe("Published Form Draft & Versioning System", () => {
     expect(discardRes.status).toBe(200);
     expect(discardRes.body.data.draftVersionId).toBe(v1Id);
     expect(discardRes.body.data.hasUnpublishedChanges).toBe(false);
-    expect(discardRes.body.data.pages).toHaveLength(1);
+    expect(discardRes.body.data.pages).toHaveLength(2);
 
     // Verify V2 was deleted from DB
     const deletedV2 = await FormVersion.findById(v2Id);

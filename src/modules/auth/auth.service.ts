@@ -47,9 +47,7 @@ export const register = async (data: RegisterBody): Promise<AuthResponse> => {
 };
 
 export const login = async (data: LoginBody): Promise<AuthResponse> => {
-  console.log({ data });
   const user = await authRepo.findUserByEmail(data.email);
-  console.log({ user });
   if (!user) {
     throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid email or password");
   }
@@ -100,9 +98,7 @@ export const login = async (data: LoginBody): Promise<AuthResponse> => {
 export const googleSignup = async (
   data: GoogleSignupBody,
 ): Promise<AuthResponse> => {
-  console.log({ data })
   const googleUser = await authUtils.verifyGoogleToken(data.idToken);
-  console.log({ googleUser })
   if (!googleUser.email_verified) {
     throw new ApiError(httpStatus.UNAUTHORIZED, "Google email is not verified");
   }

@@ -102,6 +102,65 @@ export const buildPublicFormSettings = (stored: any) => {
   };
 };
 
+const normalizePagesWithBlocks = (pages: any[]): any[] => {
+  return (pages || []).map((page: any) => {
+    const title = page.title !== undefined ? page.title : (page.label || "");
+    const description = page.description !== undefined ? page.description : (page.helperText || "");
+    const label = page.label !== undefined ? page.label : title;
+    const helperText = page.helperText !== undefined ? page.helperText : description;
+
+    let blocks = page.blocks;
+    if (!Array.isArray(blocks) || blocks.length === 0) {
+      if (page.type) {
+        blocks = [
+          {
+            _id: page._id,
+            blockKey: page.pageKey,
+            questionKey: page.pageKey,
+            title: "", // single question has no question title; page has title
+            description: "", // remove description from question
+            label: "",
+            helperText: "",
+            placeholder: page.placeholder || "",
+            type: page.type,
+            required: page.required || false,
+            order: 1,
+            coverImage: page.coverImage,
+            options: page.options || [],
+            validation: page.validation || {},
+            settings: page.settings || {},
+            appearance: page.appearance || { width: "full", icon: "" },
+            isActive: page.isActive !== false,
+          },
+        ];
+      } else {
+        blocks = [];
+      }
+    } else {
+      const hasMultiple = blocks.length > 1;
+      blocks = blocks.map((b: any) => ({
+        ...b,
+        // Question title is conditional: if page has 1 question, no question title; if multiple, question has title
+        title: hasMultiple ? (b.title !== undefined ? b.title : (b.label || "")) : "",
+        label: hasMultiple ? (b.label !== undefined ? b.label : (b.title || "")) : "",
+        // Remove description from question
+        description: "",
+        helperText: "",
+      }));
+    }
+
+    return {
+      ...page,
+      title,
+      description,
+      label,
+      helperText,
+      blocks,
+      questions: blocks,
+    };
+  });
+};
+
 export const getPublicForm = async (slugOrId: string): Promise<any> => {
   const { form, version } = await findPublicFormWithVersion(slugOrId);
 
@@ -112,7 +171,7 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
     status: form.status,
     formVersionId: version._id,
     version: version.version,
-    pages: version.formSchema.pages,
+    pages: normalizePagesWithBlocks(version.formSchema.pages),
     endPages: version.formSchema.endPages || [],
     // Logic rules (branching / display / calculations) the respondent client
     // evaluates as answers are collected.
@@ -128,10 +187,12 @@ export const getPublicForm = async (slugOrId: string): Promise<any> => {
 export const getFormSchema = async (slugOrId: string): Promise<any> => {
   const { form, version } = await findPublicFormWithVersion(slugOrId);
 
-  const pages = (version.formSchema.pages || [])
-    .filter((f: any) => f.isActive)
-    .sort((a: any, b: any) => a.order - b.order)
-    .map(({ logic, ...rest }: any) => rest);
+  const pages = normalizePagesWithBlocks(
+    (version.formSchema.pages || [])
+      .filter((f: any) => f.isActive)
+      .sort((a: any, b: any) => a.order - b.order)
+      .map(({ logic, ...rest }: any) => rest)
+  );
 
   const endPages = (version.formSchema.endPages || [])
     .sort((a: any, b: any) => a.order - b.order);
@@ -173,9 +234,11 @@ export const getFormPreview = async (slugOrId: string): Promise<any> => {
   if (versionId) {
     const version = await FormVersion.findById(versionId).lean();
     if (version) {
-      pages = (version.formSchema.pages || [])
-        .filter((f: any) => f.isActive)
-        .sort((a: any, b: any) => a.order - b.order);
+      pages = normalizePagesWithBlocks(
+        (version.formSchema.pages || [])
+          .filter((f: any) => f.isActive)
+          .sort((a: any, b: any) => a.order - b.order)
+      );
       endPages = (version.formSchema.endPages || [])
         .sort((a: any, b: any) => a.order - b.order);
       theme = version.formSchema.theme;
@@ -206,6 +269,14 @@ export const submitForm = async (
   // submission (Free = 100/month, Pro = 10,000, Team = 100,000).
   await billingService.assertCanAcceptResponse(String(form.createdBy));
 
+  const normalizedAnswers = (data.answers ?? []).map((a: any) => ({
+    ...a,
+    pageKey: a.pageKey || a.blockKey || "",
+    blockKey: a.blockKey || a.pageKey || "",
+    label: a.label || a.title || "",
+    title: a.title || a.label || "",
+  }));
+
   // Recompute calculation variables server-side from the published version's
   // logic rules so respondents cannot submit spoofed score/price values.
   // Any failure here must never block the submission itself.
@@ -219,8 +290,9 @@ export const submitForm = async (
       const settings = normalizeFormSettings(version.formSchema.settings);
       const rules = await findLogicsByFormId(String(form._id));
       const answerMap: Record<string, unknown> = {};
-      for (const answer of data.answers ?? []) {
+      for (const answer of normalizedAnswers) {
         if (answer?.pageKey) answerMap[answer.pageKey] = answer.value;
+        if (answer?.blockKey) answerMap[answer.blockKey] = answer.value;
       }
       const result = resolveFormLogic({
         pages,
@@ -240,7 +312,7 @@ export const submitForm = async (
   const response = await FormResponse.create({
     formId: form._id,
     formVersionId: form.publishedVersionId,
-    answers: data.answers,
+    answers: normalizedAnswers,
     computedVariables,
     sessionId: data.sessionId || `session_${nanoid()}`,
     metadata: {
@@ -257,7 +329,7 @@ export const submitForm = async (
     form,
     versionId: form.publishedVersionId,
     submission: response,
-    answers: data.answers,
+    answers: normalizedAnswers,
     computedVariables,
   }).catch((err) => {
     console.error("Integration dispatch error:", err);

@@ -1,15 +1,21 @@
 import { z } from "zod";
 
+const answerSchema = z
+  .object({
+    pageKey: z.string().optional(),
+    blockKey: z.string().optional(),
+    label: z.string().optional(),
+    title: z.string().optional(),
+    type: z.string().min(1),
+    value: z.any(),
+  })
+  .refine((a) => Boolean(a.pageKey || a.blockKey), {
+    message: "Either pageKey or blockKey is required",
+  });
+
 export const submitFormSchema = {
   body: z.object({
-    answers: z.array(
-      z.object({
-        pageKey: z.string().min(1),
-        label: z.string(),
-        type: z.string().min(1),
-        value: z.any(),
-      })
-    ),
+    answers: z.array(answerSchema),
     sessionId: z.string().optional(),
   }),
   params: z.object({
@@ -19,14 +25,7 @@ export const submitFormSchema = {
 
 export const saveDraftSchema = {
   body: z.object({
-    answers: z.array(
-      z.object({
-        pageKey: z.string().min(1),
-        label: z.string(),
-        type: z.string().min(1),
-        value: z.any(),
-      })
-    ),
+    answers: z.array(answerSchema),
     sessionId: z.string().optional(),
   }),
   params: z.object({

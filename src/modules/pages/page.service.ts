@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
 import { nanoid } from "nanoid";
@@ -22,23 +23,72 @@ export const createPage = async (
   const order = (await pageRepo.getMaxOrder(formId)) + 1;
   const pageKey = `page_${nanoid(8)}`;
 
+  const pageType = data.type || "statement";
+  const title = data.title !== undefined ? data.title : (data.label || "");
+  const description = data.description !== undefined ? data.description : (data.helperText || "");
+  const label = data.label !== undefined ? data.label : title;
+  const helperText = data.helperText !== undefined ? data.helperText : description;
+
+  let blocks = data.blocks;
+  if (!blocks || blocks.length === 0) {
+    if (data.type) {
+      const blockId = new mongoose.Types.ObjectId();
+      const blockKey = `block_${nanoid(8)}`;
+      blocks = [
+        {
+          _id: blockId,
+          blockKey,
+          questionKey: blockKey,
+          title: "",
+          description: "",
+          label: "",
+          helperText: "",
+          placeholder: data.placeholder || "",
+          type: data.type,
+          required: resolveRequired(data.type, data.required),
+          order: 1,
+          coverImage: data.coverImage || undefined,
+          options: data.options || [],
+          validation: data.validation || {},
+          settings: buildPageSettings(data.type, data.settings),
+          appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+    } else {
+      blocks = [];
+    }
+  }
+
   const result = await pageRepo.createPage({
     formId,
     pageKey,
-    label: data.label,
-    type: data.type,
+    title,
+    description,
+    label,
+    helperText,
+    type: pageType,
     order,
-    helperText: data.helperText || "",
     placeholder: data.placeholder || "",
-    required: resolveRequired(data.type, data.required),
+    required: resolveRequired(pageType, data.required),
     coverImage: data.coverImage || undefined,
     options: data.options || [],
     validation: data.validation || {},
-    settings: buildPageSettings(data.type, data.settings),
+    settings: buildPageSettings(pageType, data.settings),
     appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
+    blocks,
   });
 
-  return { page: result.page, hasUnpublishedChanges: result.hasUnpublishedChanges };
+  const pageObj = typeof (result.page as any)?.toObject === "function" ? (result.page as any).toObject() : result.page;
+  const id = pageObj._id?.toString() || pageObj.id;
+  const pageWithId = { ...pageObj, id, _id: pageObj._id };
+  return {
+    ...pageWithId,
+    page: pageWithId,
+    hasUnpublishedChanges: result.hasUnpublishedChanges,
+  };
 };
 
 export const getPagesByFormId = async (formId: string): Promise<any[]> => {
@@ -67,7 +117,7 @@ export const updatePage = async (
   }
 
   const payload: Record<string, any> = { ...data };
-  const nextType = data.type || page.type;
+  const nextType = data.type || page.type || "statement";
 
   // Re-derive settings whenever the type changes or new settings arrive, so a
   // page never keeps settings belonging to its previous type.
@@ -88,7 +138,14 @@ export const updatePage = async (
   if (!result) {
     throw new ApiError(httpStatus.NOT_FOUND, "Page not found");
   }
-  return { page: result.page, hasUnpublishedChanges: result.hasUnpublishedChanges };
+  const pageObj = typeof (result.page as any)?.toObject === "function" ? (result.page as any).toObject() : result.page;
+  const id = pageObj._id?.toString() || pageObj.id;
+  const pageWithId = { ...pageObj, id, _id: pageObj._id };
+  return {
+    ...pageWithId,
+    page: pageWithId,
+    hasUnpublishedChanges: result.hasUnpublishedChanges,
+  };
 };
 
 export const deletePage = async (
@@ -124,28 +181,47 @@ export const duplicatePage = async (
 
   const order = (await pageRepo.getMaxOrder(formId)) + 1;
   const pageKey = `page_${nanoid(8)}`;
+  const pageType = page.type || "statement";
+  const label = page.label || page.title || "";
+  const title = page.title || page.label || "";
+  const helperText = page.helperText || page.description || "";
+  const description = page.description || page.helperText || "";
 
   const result = await pageRepo.createPage({
     formId,
     pageKey,
-    label: `${page.label} (copy)`,
-    type: page.type,
+    title: `${title} (copy)`,
+    description,
+    label: `${label} (copy)`,
+    type: pageType,
     order,
-    helperText: page.helperText,
+    helperText,
     placeholder: page.placeholder,
     required: page.required,
     coverImage: page.coverImage ? { ...page.coverImage } : undefined,
     options: page.options,
     validation: page.validation,
-    settings: buildPageSettings(page.type, page.settings),
+    settings: buildPageSettings(pageType, page.settings),
     appearance: {
-      ...page.appearance,
-      submitButtonText: page.appearance.submitButtonText || "",
-      submitButtonColor: page.appearance.submitButtonColor || "",
+      ...(page.appearance || {}),
+      submitButtonText: page.appearance?.submitButtonText || "",
+      submitButtonColor: page.appearance?.submitButtonColor || "",
     },
+    blocks: (page.blocks || []).map((b: any) => ({
+      ...b,
+      _id: new mongoose.Types.ObjectId(),
+      blockKey: `block_${nanoid(8)}`,
+    })),
   });
 
-  return { page: result.page, hasUnpublishedChanges: result.hasUnpublishedChanges };
+  const pageObj = typeof (result.page as any)?.toObject === "function" ? (result.page as any).toObject() : result.page;
+  const id = pageObj._id?.toString() || pageObj.id;
+  const pageWithId = { ...pageObj, id, _id: pageObj._id };
+  return {
+    ...pageWithId,
+    page: pageWithId,
+    hasUnpublishedChanges: result.hasUnpublishedChanges,
+  };
 };
 
 export const updatePageLogic = async (

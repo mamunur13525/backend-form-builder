@@ -18,9 +18,11 @@ export interface PageAppearanceBody {
 }
 
 export interface CreatePageBody {
-  type: PageType;
-  label: string;
+  title?: string;
+  description?: string;
+  label?: string;
   helperText?: string;
+  type?: PageType;
   placeholder?: string;
   required?: boolean;
   coverImage?: ICoverImage | null;
@@ -28,12 +30,15 @@ export interface CreatePageBody {
   validation?: PageValidationBody;
   settings?: IPageSettings;
   appearance?: PageAppearanceBody;
+  blocks?: any[];
 }
 
 export interface UpdatePageBody {
-  type?: PageType;
+  title?: string;
+  description?: string;
   label?: string;
   helperText?: string;
+  type?: PageType;
   placeholder?: string;
   required?: boolean;
   coverImage?: ICoverImage | null;
@@ -41,6 +46,7 @@ export interface UpdatePageBody {
   validation?: PageValidationBody;
   settings?: IPageSettings;
   appearance?: PageAppearanceBody;
+  blocks?: any[];
 }
 
 export interface ReorderPagesBody {

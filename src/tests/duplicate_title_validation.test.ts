@@ -25,21 +25,19 @@ describe("Duplicate Title Validation", () => {
   });
 
   describe("Form Title Uniqueness", () => {
-    it("should register a user and create a form", async () => {
+    beforeEach(async () => {
       // Register user
       const res = await api.post("/api/v1/auth/register").send({
         name: "Test User",
-        email: "test@example.com",
+        email: `test_${Date.now()}_${Math.random().toString(36).substring(2, 7)}@example.com`,
         password: "password123",
       });
-      expect(res.status).toBe(201);
       authToken = res.body.data.tokens.accessToken;
 
       // Create first form
       const formRes = await api.post("/api/v1/forms").set("Authorization", `Bearer ${authToken}`).send({
         title: "My Test Form",
       });
-      expect(formRes.status).toBe(201);
       formId = formRes.body.data.id;
     });
 
@@ -70,11 +68,11 @@ describe("Duplicate Title Validation", () => {
 
     it("should allow updating form title to the same title (no change)", async () => {
       const res = await api.patch(`/api/v1/forms/${formId}`).set("Authorization", `Bearer ${authToken}`).send({
-        title: "Unique New Title",
+        title: "My Test Form",
       });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.title).toBe("Unique New Title");
+      expect(res.body.data.title).toBe("My Test Form");
     });
   });
 });

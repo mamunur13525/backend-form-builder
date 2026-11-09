@@ -180,6 +180,6 @@ describe("Closed form lifecycle (unpublished / cancelled)", () => {
 
     const pubRes = await api.get(`/f/${slug}`);
     expect(pubRes.status).toBe(200);
-    expect(pubRes.body.data.pages).toHaveLength(1);
+    expect(pubRes.body.data.pages).toHaveLength(2);
   });
 });

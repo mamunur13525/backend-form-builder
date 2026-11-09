@@ -22,6 +22,16 @@ const validateReferences = (
       .filter((p: any) => p && p.pageKey)
       .map((p: any) => p.pageKey as string)
   );
+  const questionAndBlockKeys = new Set<string>();
+  for (const page of form.pages ?? []) {
+    const items = [...(page?.questions ?? []), ...(page?.blocks ?? [])];
+    for (const item of items) {
+      if (item?.blockKey) questionAndBlockKeys.add(item.blockKey);
+      if (item?.questionKey) questionAndBlockKeys.add(item.questionKey);
+      if (item?._id) questionAndBlockKeys.add(String(item._id));
+      if (item?.id) questionAndBlockKeys.add(String(item.id));
+    }
+  }
   const variableNames = new Set(
     (normalizeFormSettings(form.settings).variables ?? []).map((v) => v.name)
   );
@@ -34,7 +44,7 @@ const validateReferences = (
           `Unknown variable "${condition.sourceKey}" in condition`
         );
       }
-    } else if (!pageKeys.has(condition.sourceKey)) {
+    } else if (!pageKeys.has(condition.sourceKey) && !questionAndBlockKeys.has(condition.sourceKey)) {
       throw new ApiError(
         httpStatus.UNPROCESSABLE_ENTITY,
         `Unknown page "${condition.sourceKey}" in condition`
@@ -84,7 +94,7 @@ const validateReferences = (
       const references = action.expression.match(/@([A-Za-z0-9_]+)/g) ?? [];
       for (const reference of references) {
         const name = reference.slice(1);
-        if (!pageKeys.has(name) && !variableNames.has(name)) {
+        if (!pageKeys.has(name) && !variableNames.has(name) && !questionAndBlockKeys.has(name)) {
           throw new ApiError(
             httpStatus.UNPROCESSABLE_ENTITY,
             `Unknown reference "@${name}" in expression`

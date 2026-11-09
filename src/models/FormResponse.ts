@@ -9,7 +9,10 @@ export interface IFormResponse extends Document {
   sessionId: string;
   answers: {
     pageKey: string;
+    blockKey?: string;
+    questionKey?: string;
     label: string;
+    title?: string;
     type: string;
     value: any;
   }[];
@@ -43,8 +46,11 @@ const formResponseSchema = new Schema<IFormResponse>(
 
     answers: [
       {
-        pageKey: { type: String, required: true },
-        label: { type: String, required: true },
+        pageKey: { type: String, default: "" },
+        blockKey: { type: String, default: "" },
+        questionKey: { type: String, default: "" },
+        label: { type: String, default: "" },
+        title: { type: String, default: "" },
         type: { type: String, required: true },
         value: { type: Schema.Types.Mixed, required: true },
       },
