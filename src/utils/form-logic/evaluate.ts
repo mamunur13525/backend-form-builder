@@ -387,14 +387,24 @@ const actionTarget = (action: LogicEngineAction): string | undefined =>
 const ruleReferencesPage = (rule: LogicEngineRule, pageKey: string): boolean =>
   (rule.actions ?? []).some((a) => a && actionTarget(a) === pageKey);
 
-const ruleOwnerPageKey = (rule: LogicEngineRule): string | undefined => {
+const ruleOwnerPageKey = (
+  rule: LogicEngineRule,
+  pages: LogicEnginePage[] = [],
+): string | undefined => {
   const firstPageCondition = (rule.conditions ?? []).find(
     (c) =>
       c && (!c.sourceType || c.sourceType === "page") && conditionSourceKey(c),
   );
-  return firstPageCondition
-    ? conditionSourceKey(firstPageCondition)
-    : undefined;
+  if (!firstPageCondition) return undefined;
+  const sourceKey = conditionSourceKey(firstPageCondition);
+  if (!sourceKey) return undefined;
+
+  const ownerPage = (pages as any[]).find((p) => {
+    if (p.pageKey === sourceKey) return true;
+    const qs = p.questions ?? p.blocks ?? [];
+    return qs.some((q: any) => (q.questionKey || q.blockKey || q._id || q.id) === sourceKey);
+  });
+  return ownerPage ? ownerPage.pageKey : sourceKey;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -510,7 +520,7 @@ export const resolveFormLogic = ({
     if (ruleCategory(rule) !== "branching") continue;
     if (!evaluateRule(rule, ctx)) continue;
 
-    const ownerKey = ruleOwnerPageKey(rule);
+    const ownerKey = ruleOwnerPageKey(rule, pages);
     if (!ownerKey || !pageKeys.has(ownerKey)) continue;
     if (jumpTargets[ownerKey]) continue; // first matching rule wins
 
