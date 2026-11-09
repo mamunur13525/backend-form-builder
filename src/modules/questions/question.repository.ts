@@ -89,9 +89,9 @@ export const createBlock = async (
   const blockId = new mongoose.Types.ObjectId();
   const blockKey = `question_${nanoid(8)}`;
   const title = data.title !== undefined ? data.title : (data.label || "");
-  const description = data.description !== undefined ? data.description : (data.helperText || "");
+  const description = ""; // description removed from question
   const label = data.label !== undefined ? data.label : title;
-  const helperText = data.helperText !== undefined ? data.helperText : description;
+  const helperText = ""; // description removed from question
 
   const maxOrder = page.blocks.reduce(
     (max: number, b: any) => (b.order > max ? b.order : max),
@@ -234,12 +234,8 @@ export const updateBlock = async (
       if (data.label !== undefined && data.title === undefined) {
         data.title = data.label;
       }
-      if (data.description !== undefined && data.helperText === undefined) {
-        data.helperText = data.description;
-      }
-      if (data.helperText !== undefined && data.description === undefined) {
-        data.description = data.helperText;
-      }
+      data.description = "";
+      data.helperText = "";
 
       Object.assign(block, data, { updatedAt: new Date() });
       if (block._id && !block.id) block.id = block._id.toString();

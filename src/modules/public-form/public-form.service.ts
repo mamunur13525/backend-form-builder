@@ -116,10 +116,11 @@ const normalizePagesWithBlocks = (pages: any[]): any[] => {
           {
             _id: page._id,
             blockKey: page.pageKey,
-            title,
-            description,
-            label,
-            helperText,
+            questionKey: page.pageKey,
+            title: "", // single question has no question title; page has title
+            description: "", // remove description from question
+            label: "",
+            helperText: "",
             placeholder: page.placeholder || "",
             type: page.type,
             required: page.required || false,
@@ -136,12 +137,15 @@ const normalizePagesWithBlocks = (pages: any[]): any[] => {
         blocks = [];
       }
     } else {
+      const hasMultiple = blocks.length > 1;
       blocks = blocks.map((b: any) => ({
         ...b,
-        title: b.title !== undefined ? b.title : (b.label || ""),
-        description: b.description !== undefined ? b.description : (b.helperText || ""),
-        label: b.label !== undefined ? b.label : (b.title || ""),
-        helperText: b.helperText !== undefined ? b.helperText : (b.description || ""),
+        // Question title is conditional: if page has 1 question, no question title; if multiple, question has title
+        title: hasMultiple ? (b.title !== undefined ? b.title : (b.label || "")) : "",
+        label: hasMultiple ? (b.label !== undefined ? b.label : (b.title || "")) : "",
+        // Remove description from question
+        description: "",
+        helperText: "",
       }));
     }
 
@@ -152,6 +156,7 @@ const normalizePagesWithBlocks = (pages: any[]): any[] => {
       label,
       helperText,
       blocks,
+      questions: blocks,
     };
   });
 };

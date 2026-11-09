@@ -82,7 +82,7 @@ describe("Page and Multi-Block Architecture", () => {
     expect(block1Res.body.success).toBe(true);
     expect(block1Res.body.data.type).toBe("statement");
     expect(block1Res.body.data.title).toBe("Welcome Notice");
-    expect(block1Res.body.data.description).toBe("Read this before answering");
+    expect(block1Res.body.data.description).toBe(""); // description removed from question
     expect(block1Res.body.data.order).toBe(1);
     expect(block1Res.body.data.blockKey).toBeDefined();
 
@@ -159,7 +159,7 @@ describe("Page and Multi-Block Architecture", () => {
       .send({ type: "longText", title: "Block B" });
     const blockBId = blockBRes.body.data._id;
 
-    // Update Block A title and description to empty
+    // Update Block A title and description
     const updateRes = await api
       .patch(`/api/v1/forms/${formId}/pages/${pageId}/blocks/${blockAId}`)
       .set("Authorization", `Bearer ${authToken}`)
@@ -170,7 +170,7 @@ describe("Page and Multi-Block Architecture", () => {
 
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.data.title).toBe("");
-    expect(updateRes.body.data.description).toBe("Updated description only");
+    expect(updateRes.body.data.description).toBe(""); // description removed from question
 
     // Reorder blocks (B first, then A)
     const reorderRes = await api
