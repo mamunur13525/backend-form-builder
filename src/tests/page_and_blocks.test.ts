@@ -1,35 +1,13 @@
-import { describe, it, beforeEach, before, after } from "node:test";
-import assert from "node:assert";
+/// <reference types="jest" />
 import request from "supertest";
-import mongoose from "mongoose";
 import app from "../app";
-import { connectDB } from "../config/db";
 
 const api = request(app);
-
-const expect = (actual: any) => ({
-  toBe: (expected: any) => assert.strictEqual(actual, expected),
-  toEqual: (expected: any) => assert.deepStrictEqual(actual, expected),
-  toHaveLength: (length: number) => assert.strictEqual(actual.length, length),
-  toBeGreaterThan: (expected: any) => assert.ok(actual > expected, `${actual} is not greater than ${expected}`),
-  toBeGreaterThanOrEqual: (expected: any) => assert.ok(actual >= expected, `${actual} is not >= ${expected}`),
-  toBeDefined: () => assert.notStrictEqual(actual, undefined),
-  toBeTruthy: () => assert.ok(actual),
-  toBeFalsy: () => assert.ok(!actual),
-});
 
 describe("Page and Multi-Block Architecture", () => {
   let authToken: string;
   let formId: string;
   let pageId: string;
-
-  before(async () => {
-    await connectDB();
-  });
-
-  after(async () => {
-    await mongoose.disconnect();
-  });
 
   beforeEach(async () => {
     // Register and login a fresh user for this test

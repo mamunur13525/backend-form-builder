@@ -13,12 +13,12 @@ const router: ExpressRouter = Router();
 router.use(authenticate);
 
 router.get("/:formId/responses", validate(formIdParamSchema), responseController.getResponses);
-router.get("/:formId/responses/:responseId", validate(responseIdParamSchema), responseController.getResponseById);
-router.delete("/:formId/responses/:responseId", validate(responseIdParamSchema), responseController.deleteResponse);
-router.patch("/:formId/responses/:responseId", validate(updateResponseSchema), responseController.updateResponse);
 router.get("/:formId/responses/export", validate(formIdParamSchema), responseController.exportResponses);
 router.get("/:formId/responses/stats", validate(formIdParamSchema), responseController.getResponseStats);
 router.get("/:formId/responses/summary", validate(formIdParamSchema), responseController.getResponseSummary);
+router.get("/:formId/responses/:responseId", validate(responseIdParamSchema), responseController.getResponseById);
+router.delete("/:formId/responses/:responseId", validate(responseIdParamSchema), responseController.deleteResponse);
+router.patch("/:formId/responses/:responseId", validate(updateResponseSchema), responseController.updateResponse);
 router.patch("/:formId/responses/:responseId/mark-read", validate(responseIdParamSchema), responseController.markAsRead);
 router.patch("/:formId/responses/:responseId/mark-unread", validate(responseIdParamSchema), responseController.markAsUnread);
 router.patch("/:formId/responses/:responseId/star", validate(responseIdParamSchema), responseController.starResponse);
