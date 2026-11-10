@@ -51,3 +51,9 @@ export type { IFeedbackComment } from "./Comment";
 
 export { Update, UPDATE_COVERS } from "./Update";
 export type { IUpdate, IUpdateBlock, ITextRun, UpdateCover } from "./Update";
+
+export { Workspace } from "./Workspace";
+export type { IWorkspace, IWorkspaceMember, IWorkspaceSettings, WorkspaceRole, WorkspaceVisibility } from "./Workspace";
+
+export { WorkspaceInvitation } from "./WorkspaceInvitation";
+export type { IWorkspaceInvitation, InvitationStatus } from "./WorkspaceInvitation";

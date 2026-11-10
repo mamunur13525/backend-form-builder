@@ -5,6 +5,8 @@ export const createForm = async (data: {
   title: string;
   slug: string;
   createdBy: string;
+  workspaceId?: string;
+  allowedEditors?: string[];
 }): Promise<IForm> => {
   return Form.create(data);
 };

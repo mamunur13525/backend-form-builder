@@ -509,6 +509,8 @@ export interface IForm extends Document {
   settings: IFormSettings;
   pages: IFormPage[];
   endPages: IEndPage[];
+  workspaceId?: mongoose.Types.ObjectId;
+  allowedEditors?: mongoose.Types.ObjectId[];
   createdBy: IUser["_id"];
   updatedBy?: IUser["_id"];
   createdAt: Date;
@@ -1244,6 +1246,9 @@ const formSchema = new Schema<IForm>(
 
     pages: [formPageSchema],
     endPages: [endPageSchema],
+
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", index: true },
+    allowedEditors: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
 
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },

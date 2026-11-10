@@ -15,6 +15,9 @@ import {
 export const createFormSchema = {
   body: z.object({
     title: z.string().min(1, "Title is required").max(200),
+    // The workspace the client is viewing. Zod strips unknown keys, so without
+    // this the form falls back to the caller's server-side active workspace.
+    workspaceId: z.string().regex(/^[0-9a-f]{24}$/i, "Invalid workspace id").optional(),
   }),
 };
 
@@ -127,6 +130,17 @@ export const updateFormShareSchema = {
     isPublic: z.boolean().optional(),
     password: z.string().optional(),
     expiresAt: z.string().optional(),
+  }),
+  params: z.object({
+    formId: z.string().min(1, "Form ID is required"),
+  }),
+};
+
+export const updateFormAccessSchema = {
+  body: z.object({
+    allowedEditors: z.array(z.string()).optional(),
+    userId: z.string().optional(),
+    canEdit: z.boolean().optional(),
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),

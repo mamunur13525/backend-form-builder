@@ -12,6 +12,8 @@ import { buildFormTheme } from "./form.theme";
 import { buildPageSettings } from "../pages/page.settings";
 import { buildDefaultEndPageContent } from "../../constants/endPage";
 import { findLogicsByFormId } from "../logic/logic.repository";
+import { User } from "../../models/User";
+import { Workspace } from "../../models/Workspace";
 import * as billingService from "../billing/billing.service";
 import {
   ClosedFormStatus,
@@ -24,6 +26,7 @@ import {
   UpdateFormSettingsBody,
   UpdateFormThemeBody,
   UpdateFormShareBody,
+  UpdateFormAccessBody,
   FormResponse,
 } from "./form.types";
 
@@ -124,9 +127,90 @@ const buildDefaultEndPages = () => {
   ];
 };
 
-const toFormResponse = async (
+export const assertCanEditForm = async (userId: string, formId: string): Promise<any> => {
+  const form = await formRepo.findFormById(formId);
+  if (!form) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
+  }
+
+  // If form has no workspace attached, creator has full rights
+  if (!form.workspaceId) {
+    const creatorId = (form.createdBy?._id || form.createdBy || "").toString();
+    if (creatorId && creatorId !== userId.toString()) {
+      throw new ApiError(httpStatus.FORBIDDEN, "You do not have permission to edit this form");
+    }
+    return form;
+  }
+
+  const workspace = await Workspace.findById(form.workspaceId);
+  if (!workspace) {
+    return form;
+  }
+
+  const member = (workspace.members || []).find(
+    (m: any) => (m.userId?._id || m.userId || "").toString() === userId.toString()
+  );
+  const isOwner = (workspace.createdBy?._id || workspace.createdBy || "").toString() === userId.toString();
+
+  if (!member && !isOwner) {
+    throw new ApiError(httpStatus.FORBIDDEN, "You do not have access to this workspace");
+  }
+
+  const role = member?.role || (isOwner ? "admin" : "viewer");
+
+  if (role === "admin") {
+    return form;
+  }
+
+  if (role === "member") {
+    const isAllowed =
+      !!member?.canEditAllForms ||
+      (form.allowedEditors || []).some((id: any) => id.toString() === userId.toString());
+    if (isAllowed) {
+      return form;
+    }
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      "You do not have permission to edit this form. Contact a workspace admin."
+    );
+  }
+
+  throw new ApiError(httpStatus.FORBIDDEN, "Viewers have read-only access and cannot edit forms");
+};
+
+export const assertCanDeleteForm = async (userId: string, formId: string): Promise<any> => {
+  const form = await formRepo.findFormById(formId);
+  if (!form) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
+  }
+
+  if (!form.workspaceId) {
+    const creatorId = (form.createdBy?._id || form.createdBy || "").toString();
+    if (creatorId && creatorId !== userId.toString()) {
+      throw new ApiError(httpStatus.FORBIDDEN, "You do not have permission to delete this form");
+    }
+    return form;
+  }
+
+  const workspace = await Workspace.findById(form.workspaceId);
+  if (!workspace) return form;
+
+  const member = (workspace.members || []).find(
+    (m: any) => (m.userId?._id || m.userId || "").toString() === userId.toString()
+  );
+  const isOwner = (workspace.createdBy?._id || workspace.createdBy || "").toString() === userId.toString();
+  const role = member?.role || (isOwner ? "admin" : "viewer");
+
+  if (role !== "admin") {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only workspace admins can delete forms");
+  }
+  return form;
+};
+
+export const toFormResponse = async (
   form: any,
-  withLogic = false
+  withLogic = false,
+  userId?: string
 ): Promise<FormResponse> => {
   let draftVersion: any = null;
   if (form.draftVersionId) {
@@ -145,6 +229,26 @@ const toFormResponse = async (
   // form anyway).
   const logic = withLogic ? await findLogicsByFormId(String(form._id)) : undefined;
 
+  let canEdit = true;
+  if (userId && form.workspaceId) {
+    const ws = await Workspace.findById(form.workspaceId).lean();
+    if (ws) {
+      const member = (ws.members || []).find(
+        (m: any) => (m.userId?._id || m.userId || "").toString() === userId.toString()
+      );
+      const isOwner = (ws.createdBy?._id || ws.createdBy || "").toString() === userId.toString();
+      const role = member?.role || (isOwner ? "admin" : "viewer");
+      if (role === "admin") {
+        canEdit = true;
+      } else if (role === "member") {
+        canEdit = !!member?.canEditAllForms ||
+          (form.allowedEditors || []).some((id: any) => id.toString() === userId.toString());
+      } else {
+        canEdit = false;
+      }
+    }
+  }
+
   return {
     id: form._id.toString(),
     title: form.title,
@@ -158,6 +262,9 @@ const toFormResponse = async (
     pages,
     endPages,
     settings,
+    workspaceId: form.workspaceId?.toString(),
+    allowedEditors: (form.allowedEditors || []).map((id: any) => id.toString()),
+    canEdit,
     ...(logic !== undefined ? { logic } : {}),
     createdBy: form.createdBy?._id?.toString() || form.createdBy?.toString(),
     updatedBy: form.updatedBy?.toString(),
@@ -173,6 +280,29 @@ export const createForm = async (
   // Enforce the account's plan form limit before creating anything.
   await billingService.assertCanCreateForm(userId);
 
+  // Resolve target workspace
+  let workspaceId = data.workspaceId;
+  if (!workspaceId) {
+    const user = await User.findById(userId);
+    if (user?.activeWorkspaceId) {
+      workspaceId = user.activeWorkspaceId.toString();
+    }
+  }
+
+  if (workspaceId) {
+    const workspace = await Workspace.findById(workspaceId);
+    if (workspace) {
+      const member = (workspace.members || []).find(
+        (m: any) => (m.userId?._id || m.userId || "").toString() === userId.toString()
+      );
+      const isOwner = (workspace.createdBy?._id || workspace.createdBy || "").toString() === userId.toString();
+      const role = member?.role || (isOwner ? "admin" : "viewer");
+      if (role === "viewer") {
+        throw new ApiError(httpStatus.FORBIDDEN, "Viewers cannot create forms in this workspace");
+      }
+    }
+  }
+
   const slug = await generateUniqueSlug(data.title, formRepo.checkSlugExists);
   const defaultPages = buildDefaultInitialPages();
   const defaultEndPages = buildDefaultEndPages();
@@ -181,6 +311,8 @@ export const createForm = async (
     title: data.title,
     slug,
     createdBy: userId,
+    workspaceId: workspaceId || undefined,
+    allowedEditors: [new mongoose.Types.ObjectId(userId)],
   });
 
   const v1 = await createInitialVersion(form._id, userId, {
@@ -195,7 +327,7 @@ export const createForm = async (
   form.endPages = defaultEndPages as any;
   await form.save();
 
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
 export const getAllForms = async (
@@ -204,31 +336,57 @@ export const getAllForms = async (
   limit: number,
   sort: Record<string, 1 | -1>,
   filter: Record<string, any> = {},
+  workspaceId?: string
 ) => {
-  const query = { ...filter, createdBy: userId };
+  let targetWorkspaceId = workspaceId;
+  if (!targetWorkspaceId) {
+    const user = await User.findById(userId);
+    if (user?.activeWorkspaceId) {
+      targetWorkspaceId = user.activeWorkspaceId.toString();
+    }
+  }
+
+  let query: any;
+  if (targetWorkspaceId) {
+    query = {
+      ...filter,
+      $or: [
+        { workspaceId: targetWorkspaceId },
+        { createdBy: userId, workspaceId: null },
+      ],
+    };
+  } else {
+    query = { ...filter, createdBy: userId };
+  }
+
   const [forms, total] = await Promise.all([
     formRepo.findAllForms(skip, limit, sort, query),
     formRepo.countForms(query),
   ]);
-  const formResponses = await Promise.all(forms.map((form) => toFormResponse(form)));
+  const formResponses = await Promise.all(forms.map((form) => toFormResponse(form, false, userId)));
   return {
     forms: formResponses,
     meta: getPaginationMeta(total, Math.floor(skip / limit) + 1, limit),
   };
 };
 
-export const getFormById = async (formId: string): Promise<FormResponse> => {
+export const getFormById = async (formId: string, userId?: string): Promise<FormResponse> => {
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
-  return toFormResponse(form, true);
+  return toFormResponse(form, true, userId);
 };
 
 export const updateForm = async (
   formId: string,
   data: UpdateFormBody,
+  userId?: string
 ): Promise<FormResponse> => {
+  if (userId) {
+    await assertCanEditForm(userId, formId);
+  }
+
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
@@ -249,10 +407,14 @@ export const updateForm = async (
   }
   await form.save();
 
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
-export const deleteForm = async (formId: string): Promise<void> => {
+export const deleteForm = async (formId: string, userId?: string): Promise<void> => {
+  if (userId) {
+    await assertCanDeleteForm(userId, formId);
+  }
+
   const form = await formRepo.deleteForm(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
@@ -282,6 +444,9 @@ export const duplicateForm = async (
     title: formTitle,
     slug,
     createdBy: userId,
+    // A copy belongs wherever the original lives; without this it would be an
+    // orphan invisible to the rest of the workspace.
+    workspaceId: original.workspaceId?.toString(),
   });
 
   const v1 = await createInitialVersion(newForm._id, userId, {
@@ -302,23 +467,26 @@ export const duplicateForm = async (
   return toFormResponse(newForm);
 };
 
-export const archiveForm = async (formId: string): Promise<FormResponse> => {
+export const archiveForm = async (formId: string, userId?: string): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
   const form = await formRepo.updateForm(formId, { status: formStatus.ARCHIVED });
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
-export const restoreForm = async (formId: string): Promise<FormResponse> => {
+export const restoreForm = async (formId: string, userId?: string): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
   const form = await formRepo.updateForm(formId, { status: formStatus.DRAFT });
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
   }
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
-export const publishForm = async (formId: string): Promise<FormResponse> => {
+export const publishForm = async (formId: string, userId?: string): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
   const form = await formRepo.findFormById(formId);
 
   if (!form) {
@@ -339,7 +507,7 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
       form.settings = publishedVersion.formSchema.settings as any;
       form.theme = publishedVersion.formSchema.theme as any;
       await form.save();
-      return toFormResponse(form);
+      return toFormResponse(form, false, userId);
     }
   }
 
@@ -355,7 +523,7 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
   form.theme = draftVersion.formSchema.theme as any;
 
   await form.save();
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
 /**
@@ -363,18 +531,21 @@ export const publishForm = async (formId: string): Promise<FormResponse> => {
  * published again unchanged, and so existing responses keep a resolvable
  * version reference.
  */
-export const unpublishForm = async (formId: string): Promise<FormResponse> => {
-  return closePublishedForm(formId, formStatus.UNPUBLISHED);
+export const unpublishForm = async (formId: string, userId?: string): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
+  return closePublishedForm(formId, formStatus.UNPUBLISHED, userId);
 };
 
 /** Permanently closes a live form. Retains the published version like unpublish. */
-export const cancelForm = async (formId: string): Promise<FormResponse> => {
-  return closePublishedForm(formId, formStatus.CANCELLED);
+export const cancelForm = async (formId: string, userId?: string): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
+  return closePublishedForm(formId, formStatus.CANCELLED, userId);
 };
 
 const closePublishedForm = async (
   formId: string,
   status: ClosedFormStatus,
+  userId?: string
 ): Promise<FormResponse> => {
   const form = await formRepo.findFormById(formId);
   if (!form) {
@@ -382,7 +553,7 @@ const closePublishedForm = async (
   }
 
   if (form.status === status) {
-    return toFormResponse(form);
+    return toFormResponse(form, false, userId);
   }
 
   if (form.status !== formStatus.PUBLISHED && !isClosedFormStatus(form.status)) {
@@ -394,10 +565,11 @@ const closePublishedForm = async (
 
   form.status = status;
   await form.save();
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
-export const discardDraft = async (formId: string): Promise<FormResponse> => {
+export const discardDraft = async (formId: string, userId?: string): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
@@ -415,7 +587,7 @@ export const discardDraft = async (formId: string): Promise<FormResponse> => {
     await form.save();
   }
 
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
 export const getFormVersions = async (formId: string): Promise<any[]> => {
@@ -456,7 +628,9 @@ export const getFormSlug = async (
 export const updateFormSettings = async (
   formId: string,
   data: UpdateFormSettingsBody,
+  userId?: string
 ): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
@@ -476,13 +650,15 @@ export const updateFormSettings = async (
     await form.save();
   }
 
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
 export const updateFormTheme = async (
   formId: string,
   data: UpdateFormThemeBody,
+  userId?: string
 ): Promise<FormResponse> => {
+  if (userId) await assertCanEditForm(userId, formId);
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
@@ -499,13 +675,15 @@ export const updateFormTheme = async (
     await form.save();
   }
 
-  return toFormResponse(form);
+  return toFormResponse(form, false, userId);
 };
 
 export const updateFormShare = async (
   formId: string,
   data: UpdateFormShareBody,
+  userId?: string
 ): Promise<any> => {
+  if (userId) await assertCanEditForm(userId, formId);
   const form = await formRepo.findFormById(formId);
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
@@ -519,4 +697,101 @@ export const updateFormShare = async (
     password: share.password ? "****" : "",
     expiresAt: share.expiresAt,
   };
+};
+
+export const getFormAccess = async (formId: string, userId: string) => {
+  const form = await formRepo.findFormById(formId);
+  if (!form) throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
+
+  if (!form.workspaceId) {
+    return {
+      formId,
+      allowedEditors: (form.allowedEditors || []).map((id: any) => id.toString()),
+      members: [],
+    };
+  }
+
+  const workspace = await Workspace.findById(form.workspaceId)
+    .populate("members.userId", "name email avatarUrl")
+    .lean();
+  if (!workspace) throw new ApiError(httpStatus.NOT_FOUND, "Workspace not found");
+
+  const callerMember = (workspace.members || []).find(
+    (m: any) => (m.userId?._id || m.userId || "").toString() === userId.toString()
+  );
+  const isOwner = (workspace.createdBy?._id || workspace.createdBy || "").toString() === userId.toString();
+  const callerRole = callerMember?.role || (isOwner ? "admin" : "viewer");
+
+  if (callerRole !== "admin") {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only workspace admins can view form access permissions");
+  }
+
+  const allowedEditorSet = new Set((form.allowedEditors || []).map((id: any) => id.toString()));
+
+  const members = (workspace.members || []).map((m: any) => {
+    const u = m.userId || {};
+    const uid = (u._id || u.id || m.userId || "").toString();
+    const canEdit = m.role === "admin" || !!m.canEditAllForms || allowedEditorSet.has(uid);
+
+    return {
+      userId: uid,
+      name: u.name || "",
+      email: u.email || "",
+      avatarUrl: u.avatarUrl || "",
+      role: m.role,
+      canEditAllForms: !!m.canEditAllForms,
+      canEdit,
+    };
+  });
+
+  return {
+    formId,
+    allowedEditors: Array.from(allowedEditorSet),
+    members,
+  };
+};
+
+export const updateFormAccess = async (
+  formId: string,
+  userId: string,
+  data: UpdateFormAccessBody
+) => {
+  const form = await formRepo.findFormById(formId);
+  if (!form) throw new ApiError(httpStatus.NOT_FOUND, "Form not found");
+
+  if (!form.workspaceId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Form is not associated with a workspace");
+  }
+
+  const workspace = await Workspace.findById(form.workspaceId);
+  if (!workspace) throw new ApiError(httpStatus.NOT_FOUND, "Workspace not found");
+
+  const callerMember = (workspace.members || []).find(
+    (m: any) => (m.userId?._id || m.userId || "").toString() === userId.toString()
+  );
+  const isOwner = (workspace.createdBy?._id || workspace.createdBy || "").toString() === userId.toString();
+  const callerRole = callerMember?.role || (isOwner ? "admin" : "viewer");
+
+  if (callerRole !== "admin") {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only workspace admins can manage form access");
+  }
+
+  if (Array.isArray(data.allowedEditors)) {
+    form.allowedEditors = data.allowedEditors.map((id) => new mongoose.Types.ObjectId(id)) as any;
+  } else if (data.userId && data.canEdit !== undefined) {
+    const targetUid = data.userId;
+    const current = (form.allowedEditors || []).map((id: any) => id.toString());
+    if (data.canEdit) {
+      if (!current.includes(targetUid)) {
+        form.allowedEditors = [...(form.allowedEditors || []), new mongoose.Types.ObjectId(targetUid)] as any;
+      }
+    } else {
+      form.allowedEditors = (form.allowedEditors || []).filter(
+        (id: any) => id.toString() !== targetUid
+      ) as any;
+    }
+  }
+
+  await form.save();
+  return getFormAccess(formId, userId);
 };

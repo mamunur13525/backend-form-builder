@@ -434,5 +434,30 @@ describe("Typeform API Endpoints", () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
     });
+
+    it("should get active workspace", async () => {
+      const res = await api
+        .get("/api/v1/workspaces/active")
+        .set("Authorization", `Bearer ${authToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty("workspaceId");
+    });
+
+    it("should set active workspace", async () => {
+      const created = await api
+        .post("/api/v1/workspaces")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Active WS" });
+      const targetWorkspaceId = created.body.data._id;
+
+      const res = await api
+        .put("/api/v1/workspaces/active")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ workspaceId: targetWorkspaceId });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.workspaceId).toBe(targetWorkspaceId);
+    });
   });
 });
