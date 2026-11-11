@@ -226,6 +226,7 @@ export const createPageSchema = {
       settings: settingsSchema.optional(),
       appearance: appearanceSchema.optional(),
       blocks: z.array(z.any()).optional(),
+      questions: z.array(z.any()).optional(),
     })
     .strict(), // Prevent additional pages like 'order' from being passed
   params: z.object({
@@ -248,6 +249,7 @@ export const updatePageSchema = {
     settings: settingsSchema.optional(),
     appearance: appearanceSchema.optional(),
     blocks: z.array(z.any()).optional(),
+    questions: z.array(z.any()).optional(),
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),

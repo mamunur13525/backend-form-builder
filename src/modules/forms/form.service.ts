@@ -7,6 +7,8 @@ import { getPaginationMeta } from "../../utils/pagination";
 import * as formRepo from "./form.repository";
 import { FormVersion } from "../../models/FormVersion";
 import { Form, normalizeFormSettings } from "../../models/Form";
+import { FormResponse as FormResponseModel } from "../../models/FormResponse";
+import { FormView } from "../../models/FormView";
 import { createInitialVersion, ensureDraftVersion } from "./version.helper";
 import { buildFormTheme } from "./form.theme";
 import { buildPageSettings } from "../pages/page.settings";
@@ -220,8 +222,19 @@ export const toFormResponse = async (
   // Filled in against the defaults so forms created before a theme property
   // existed still return a complete appearance object.
   const theme = buildFormTheme(draftVersion?.formSchema?.theme || form.theme);
-  const pages = draftVersion?.formSchema?.pages || form.pages || [];
-  const endPages = draftVersion?.formSchema?.endPages || form.endPages || [];
+  const rawPages = draftVersion?.formSchema?.pages || form.pages || [];
+  const pages = [...rawPages]
+    .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+    .map((p: any) => {
+      const pageObj = typeof p?.toObject === "function" ? p.toObject() : { ...p };
+      const rawBlocks = pageObj.blocks || pageObj.questions || [];
+      const sortedBlocks = [...rawBlocks].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+      pageObj.blocks = sortedBlocks;
+      pageObj.questions = sortedBlocks;
+      return pageObj;
+    });
+  const rawEndPages = draftVersion?.formSchema?.endPages || form.endPages || [];
+  const endPages = [...rawEndPages].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
   const settings = normalizeFormSettings(draftVersion?.formSchema?.settings || form.settings);
 
   // Logic rules live in their own collection; only single-form responses ask
@@ -312,7 +325,7 @@ export const createForm = async (
     slug,
     createdBy: userId,
     workspaceId: workspaceId || undefined,
-    allowedEditors: [new mongoose.Types.ObjectId(userId)],
+    allowedEditors: [userId],
   });
 
   const v1 = await createInitialVersion(form._id, userId, {
@@ -363,7 +376,47 @@ export const getAllForms = async (
     formRepo.findAllForms(skip, limit, sort, query),
     formRepo.countForms(query),
   ]);
-  const formResponses = await Promise.all(forms.map((form) => toFormResponse(form, false, userId)));
+
+  const formIds = forms.map((f: any) => f._id);
+  const [completedAgg, partialAgg, viewAgg] = await Promise.all([
+    FormResponseModel.aggregate([
+      {
+        $match: {
+          formId: { $in: formIds },
+          $or: [{ status: "completed" }, { status: { $exists: false } }, { status: null }],
+        },
+      },
+      { $group: { _id: "$formId", count: { $sum: 1 } } },
+    ]),
+    FormResponseModel.aggregate([
+      { $match: { formId: { $in: formIds }, status: "partial" } },
+      { $group: { _id: "$formId", count: { $sum: 1 } } },
+    ]),
+    FormView.aggregate([
+      { $match: { formId: { $in: formIds } } },
+      { $group: { _id: "$formId", count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const completedMap = new Map(completedAgg.map((x: any) => [x._id.toString(), x.count]));
+  const partialMap = new Map(partialAgg.map((x: any) => [x._id.toString(), x.count]));
+  const viewMap = new Map(viewAgg.map((x: any) => [x._id.toString(), x.count]));
+
+  const formResponses = await Promise.all(
+    forms.map(async (form) => {
+      const resp = await toFormResponse(form, false, userId);
+      const fId = form._id.toString();
+      const comp = completedMap.get(fId) || 0;
+      const part = partialMap.get(fId) || 0;
+      const vw = Math.max(viewMap.get(fId) || 0, comp + part);
+      return {
+        ...resp,
+        responses_count: comp,
+        partial_count: part,
+        views_count: vw,
+      };
+    })
+  );
   return {
     forms: formResponses,
     meta: getPaginationMeta(total, Math.floor(skip / limit) + 1, limit),

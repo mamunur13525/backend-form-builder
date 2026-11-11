@@ -214,10 +214,10 @@ export const updateInvitation = async (
 
 export const findInvitationsByWorkspace = async (
   workspaceId: string,
-  status = "pending"
+  status: InvitationStatus = "pending"
 ): Promise<IWorkspaceInvitation[]> => {
   if (!mongoose.Types.ObjectId.isValid(workspaceId)) return [];
-  return WorkspaceInvitation.find({ workspaceId, status })
+  return WorkspaceInvitation.find({ workspaceId: new mongoose.Types.ObjectId(workspaceId) as any, status })
     .populate("invitedBy", "name email avatarUrl")
     .sort({ createdAt: -1 })
     .lean();

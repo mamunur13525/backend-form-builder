@@ -37,6 +37,9 @@ export type {
 export { FormResponse } from "./FormResponse";
 export type { IFormResponse } from "./FormResponse";
 
+export { FormView } from "./FormView";
+export type { IFormView } from "./FormView";
+
 export { FormShare } from "./FormShare";
 export type { IFormShare } from "./FormShare";
 

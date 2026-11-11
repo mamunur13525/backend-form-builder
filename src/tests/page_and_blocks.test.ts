@@ -189,6 +189,35 @@ describe("Page and Multi-Block Architecture", () => {
     expect(reorderedBlocks.body.data[1]._id).toBe(blockAId);
     expect(reorderedBlocks.body.data[1].order).toBe(2);
 
+    // Verify reloading the full form also returns questions/blocks in the reordered state
+    const formWithReorderedBlocks = await api
+      .get(`/api/v1/forms/${formId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+    const targetPage = formWithReorderedBlocks.body.data.pages.find((p: any) => p._id === pageId);
+    expect(targetPage.blocks[0]._id).toBe(blockBId);
+    expect(targetPage.blocks[0].order).toBe(1);
+    expect(targetPage.questions[0]._id).toBe(blockBId);
+    expect(targetPage.questions[0].order).toBe(1);
+
+    // Reorder back using PATCH /pages/:pageId with questions array (as the UI does)
+    const reversedQuestions = [
+      { ...reorderedBlocks.body.data[1], order: 1 },
+      { ...reorderedBlocks.body.data[0], order: 2 },
+    ];
+    const pageUpdateRes = await api
+      .patch(`/api/v1/forms/${formId}/pages/${pageId}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ questions: reversedQuestions });
+    expect(pageUpdateRes.status).toBe(200);
+
+    // Verify reloading the form reflects the update made via questions array
+    const formAfterPageUpdate = await api
+      .get(`/api/v1/forms/${formId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+    const targetPageAfterUpdate = formAfterPageUpdate.body.data.pages.find((p: any) => p._id === pageId);
+    expect(targetPageAfterUpdate.blocks[0]._id).toBe(blockAId);
+    expect(targetPageAfterUpdate.questions[0]._id).toBe(blockAId);
+
     // Delete Block B
     const deleteRes = await api
       .delete(`/api/v1/forms/${formId}/pages/${pageId}/blocks/${blockBId}`)
