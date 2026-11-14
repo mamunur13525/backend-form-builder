@@ -4,8 +4,10 @@ import { FormStatus, formStatus, formStatusValues } from "../constants/status";
 import {
   addressPageKeys,
   allowedFileTypeValues,
+  contactInfoPageKeys,
   countryCodeModes,
   defaultAddressPages,
+  defaultContactInfoPages,
   DEFAULT_MAX_UPLOAD_SIZE_MB,
   DEFAULT_OPTIONS_PER_ROW_DESKTOP,
   DEFAULT_OPTIONS_PER_ROW_MOBILE,
@@ -13,6 +15,10 @@ import {
   DEFAULT_RATING_STYLE,
   DEFAULT_SCALE_MAX,
   DEFAULT_SCALE_MIN,
+  DEFAULT_SLIDER_MAX,
+  DEFAULT_SLIDER_MIN,
+  DEFAULT_SLIDER_STEP,
+  sliderSeparatorValues,
   embedProviders,
   pageTypes,
   PageType,
@@ -315,6 +321,20 @@ export interface IAddressPageSettings {
   pages: IAddressSubPage[];
 }
 
+export interface IContactInfoSubPage {
+  key: (typeof contactInfoPageKeys)[number];
+  label: string;
+  placeholder: string;
+  required: boolean;
+  hidden: boolean;
+  order: number;
+}
+
+export interface IContactInfoPageSettings {
+  pages: IContactInfoSubPage[];
+  phone?: IPhonePageSettings;
+}
+
 export interface IRatingPageSettings {
   /** `star` renders stars, `number` renders a numeric range. */
   style: "star" | "number";
@@ -327,6 +347,18 @@ export interface IOpinionScalePageSettings {
   max: number;
   leftLabel: string;
   rightLabel: string;
+}
+
+export interface ISliderPageSettings {
+  min?: number;
+  max?: number;
+  step?: number;
+  rangeMode?: boolean;
+  defaultLow?: number | null;
+  defaultHigh?: number | null;
+  prefix?: string;
+  suffix?: string;
+  thousandSeparator?: (typeof sliderSeparatorValues)[number];
 }
 
 export interface IUploadPageSettings {
@@ -355,8 +387,10 @@ export interface IPageSettings {
   statement?: IStatementPageSettings;
   choice?: IChoicePageSettings;
   address?: IAddressPageSettings;
+  contactInfo?: IContactInfoPageSettings;
   rating?: IRatingPageSettings;
   opinionScale?: IOpinionScalePageSettings;
+  slider?: ISliderPageSettings;
   upload?: IUploadPageSettings;
   matrix?: IMatrixPageSettings;
 }
@@ -953,6 +987,26 @@ const addressSettingsSchema = new Schema<IAddressPageSettings>(
   subDoc
 );
 
+const contactInfoSubPageSchema = new Schema<IContactInfoSubPage>(
+  {
+    key: { type: String, enum: contactInfoPageKeys, required: true },
+    label: { type: String, required: true },
+    placeholder: { type: String, default: "" },
+    required: { type: Boolean, default: false },
+    hidden: { type: Boolean, default: false },
+    order: { type: Number, required: true },
+  },
+  subDoc
+);
+
+const contactInfoSettingsSchema = new Schema<IContactInfoPageSettings>(
+  {
+    pages: { type: [contactInfoSubPageSchema], default: () => defaultContactInfoPages },
+    phone: { type: phoneSettingsSchema, default: undefined },
+  },
+  subDoc
+);
+
 const ratingSettingsSchema = new Schema<IRatingPageSettings>(
   {
     style: { type: String, enum: ratingStyles, default: DEFAULT_RATING_STYLE },
@@ -967,6 +1021,21 @@ const opinionScaleSettingsSchema = new Schema<IOpinionScalePageSettings>(
     max: { type: Number, default: DEFAULT_SCALE_MAX },
     leftLabel: { type: String, default: "" },
     rightLabel: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const sliderSettingsSchema = new Schema<ISliderPageSettings>(
+  {
+    min: { type: Number, default: DEFAULT_SLIDER_MIN },
+    max: { type: Number, default: DEFAULT_SLIDER_MAX },
+    step: { type: Number, default: DEFAULT_SLIDER_STEP },
+    rangeMode: { type: Boolean, default: false },
+    defaultLow: { type: Number, default: null },
+    defaultHigh: { type: Number, default: null },
+    prefix: { type: String, default: "" },
+    suffix: { type: String, default: "" },
+    thousandSeparator: { type: String, enum: sliderSeparatorValues, default: "comma" },
   },
   subDoc
 );
@@ -1017,8 +1086,10 @@ const pageSettingsSchema = new Schema<IPageSettings>(
     statement: { type: statementSettingsSchema, default: undefined },
     choice: { type: choiceSettingsSchema, default: undefined },
     address: { type: addressSettingsSchema, default: undefined },
+    contactInfo: { type: contactInfoSettingsSchema, default: undefined },
     rating: { type: ratingSettingsSchema, default: undefined },
     opinionScale: { type: opinionScaleSettingsSchema, default: undefined },
+    slider: { type: sliderSettingsSchema, default: undefined },
     upload: { type: uploadSettingsSchema, default: undefined },
     matrix: { type: matrixSettingsSchema, default: undefined },
   },
