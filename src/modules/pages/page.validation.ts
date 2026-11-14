@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   addressPageKeys,
   allowedFileTypeValues,
+  contactInfoPageKeys,
   countryCodeModes,
   embedProviders,
   pageTypes,
@@ -16,6 +17,7 @@ import {
   SCALE_LOWER_BOUND,
   SCALE_UPPER_BOUND,
   selectionLimitModes,
+  sliderSeparatorValues,
 } from "../../constants/pageTypes";
 
 const pageTypeEnum = z.enum(pageTypes);
@@ -100,11 +102,44 @@ const addressSubPageSchema = z.object({
   order: z.number().int().positive().optional(),
 });
 
+const contactInfoSubPageSchema = z.object({
+  key: z.enum(contactInfoPageKeys),
+  label: z.string().max(200),
+  placeholder: z.string().max(200).optional(),
+  required: z.boolean().optional(),
+  hidden: z.boolean().optional(),
+  order: z.number().int().positive().optional(),
+});
+
 const matrixEntrySchema = z.object({
   key: z.string().min(1).max(100),
   label: z.string().max(500).optional(),
   order: z.number().int().positive(),
 });
+
+const defaultCountrySchema = z
+  .object({
+    iso2: z.string().max(2).optional(),
+    name: z.string().max(100).optional(),
+    dialCode: z.string().max(10).optional(),
+  })
+  .nullish();
+
+const phoneSettingsSchema = z
+  .object({
+    phoneVerification: z.boolean().optional(),
+    countryCodeMode: z.enum(countryCodeModes).optional(),
+    defaultCountry: defaultCountrySchema,
+  })
+  .refine(
+    (v) =>
+      v.countryCodeMode !== "specific" ||
+      Boolean(v.defaultCountry?.iso2 || v.defaultCountry?.dialCode),
+    {
+      message: "defaultCountry is required when countryCodeMode is 'specific'",
+      path: ["defaultCountry"],
+    }
+  );
 
 const settingsSchema = z
   .object({
@@ -115,28 +150,7 @@ const settingsSchema = z
       })
       .optional(),
 
-    phone: z
-      .object({
-        phoneVerification: z.boolean().optional(),
-        countryCodeMode: z.enum(countryCodeModes).optional(),
-        defaultCountry: z
-          .object({
-            iso2: z.string().max(2).optional(),
-            name: z.string().max(100).optional(),
-            dialCode: z.string().max(10).optional(),
-          })
-          .optional(),
-      })
-      .refine(
-        (v) =>
-          v.countryCodeMode !== "specific" ||
-          Boolean(v.defaultCountry?.iso2 || v.defaultCountry?.dialCode),
-        {
-          message: "defaultCountry is required when countryCodeMode is 'specific'",
-          path: ["defaultCountry"],
-        }
-      )
-      .optional(),
+    phone: phoneSettingsSchema.optional(),
 
     statement: z
       .object({
@@ -163,6 +177,14 @@ const settingsSchema = z
       })
       .optional(),
 
+    contactInfo: z
+      .object({
+        pages: z.array(contactInfoSubPageSchema).max(contactInfoPageKeys.length).optional(),
+        phone: phoneSettingsSchema.optional(),
+      })
+      .passthrough()
+      .optional(),
+
     rating: z
       .object({
         style: z.enum(ratingStyles).optional(),
@@ -176,6 +198,24 @@ const settingsSchema = z
         max: z.number().int().min(SCALE_LOWER_BOUND).max(SCALE_UPPER_BOUND).optional(),
         leftLabel: z.string().max(200).optional(),
         rightLabel: z.string().max(200).optional(),
+      })
+      .refine((v) => v.min == null || v.max == null || v.min < v.max, {
+        message: "min must be less than max",
+        path: ["min"],
+      })
+      .optional(),
+
+    slider: z
+      .object({
+        min: z.number().nullish(),
+        max: z.number().nullish(),
+        step: z.number().positive().nullish(),
+        rangeMode: z.boolean().optional(),
+        defaultLow: z.number().nullish(),
+        defaultHigh: z.number().nullish(),
+        prefix: z.string().max(50).optional(),
+        suffix: z.string().max(50).optional(),
+        thousandSeparator: z.enum(sliderSeparatorValues).optional(),
       })
       .refine((v) => v.min == null || v.max == null || v.min < v.max, {
         message: "min must be less than max",
@@ -201,7 +241,7 @@ const settingsSchema = z
       })
       .optional(),
   })
-  .strict();
+  .passthrough();
 
 const appearanceSchema = z.object({
   width: z.enum(["full", "half"]).optional(),
@@ -226,6 +266,7 @@ export const createPageSchema = {
       settings: settingsSchema.optional(),
       appearance: appearanceSchema.optional(),
       blocks: z.array(z.any()).optional(),
+      questions: z.array(z.any()).optional(),
     })
     .strict(), // Prevent additional pages like 'order' from being passed
   params: z.object({
@@ -248,6 +289,7 @@ export const updatePageSchema = {
     settings: settingsSchema.optional(),
     appearance: appearanceSchema.optional(),
     blocks: z.array(z.any()).optional(),
+    questions: z.array(z.any()).optional(),
   }),
   params: z.object({
     formId: z.string().min(1, "Form ID is required"),

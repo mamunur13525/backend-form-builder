@@ -9,6 +9,7 @@ export interface IUser extends Document {
   avatarUrl: string;
   role: "admin" | "editor" | "viewer";
   isActive: boolean;
+  activeWorkspaceId?: mongoose.Types.ObjectId;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +40,7 @@ const userSchema = new Schema<IUser>(
       default: "viewer",
     },
     isActive: { type: Boolean, default: true },
+    activeWorkspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", default: null },
     lastLoginAt: { type: Date },
   },
   { timestamps: true }

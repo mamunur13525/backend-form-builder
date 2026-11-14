@@ -13,6 +13,13 @@ import {
 
 export interface CreateFormBody {
   title: string;
+  workspaceId?: string;
+}
+
+export interface UpdateFormAccessBody {
+  allowedEditors?: string[];
+  userId?: string;
+  canEdit?: boolean;
 }
 
 export interface UpdateFormBody {
@@ -78,6 +85,9 @@ export interface FormResponse {
   endPages?: IEndPage[];
   /** Form-level logic rules, only included when the endpoint asks for them. */
   logic?: any[];
+  workspaceId?: string;
+  allowedEditors?: string[];
+  canEdit?: boolean;
   createdBy: string;
   updatedBy?: string;
   createdAt: Date;

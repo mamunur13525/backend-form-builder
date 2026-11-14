@@ -8,7 +8,8 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "test": "jest",
-    "seed:feedback": "tsx src/scripts/seed-feedback.ts"
+    "seed:feedback": "tsx src/scripts/seed-feedback.ts",
+    "backfill:form-workspaces": "tsx src/scripts/backfill-form-workspaces.ts"
   },
   "keywords": [],
   "type": "commonjs",

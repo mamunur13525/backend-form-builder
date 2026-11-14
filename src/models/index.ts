@@ -37,6 +37,9 @@ export type {
 export { FormResponse } from "./FormResponse";
 export type { IFormResponse } from "./FormResponse";
 
+export { FormView } from "./FormView";
+export type { IFormView } from "./FormView";
+
 export { FormShare } from "./FormShare";
 export type { IFormShare } from "./FormShare";
 
@@ -51,3 +54,9 @@ export type { IFeedbackComment } from "./Comment";
 
 export { Update, UPDATE_COVERS } from "./Update";
 export type { IUpdate, IUpdateBlock, ITextRun, UpdateCover } from "./Update";
+
+export { Workspace } from "./Workspace";
+export type { IWorkspace, IWorkspaceMember, IWorkspaceSettings, WorkspaceRole, WorkspaceVisibility } from "./Workspace";
+
+export { WorkspaceInvitation } from "./WorkspaceInvitation";
+export type { IWorkspaceInvitation, InvitationStatus } from "./WorkspaceInvitation";

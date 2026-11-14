@@ -22,7 +22,9 @@ export const pageTypes = [
   "url",
   "statement",
   "address",
+  "contactInfo",
   "opinionScale",
+  "slider",
   "signature",
   "matrix",
 ] as const;
@@ -144,6 +146,17 @@ export const SCALE_LOWER_BOUND = 0;
 export const SCALE_UPPER_BOUND = 100;
 
 /* -------------------------------------------------------------------------- */
+/* Slider                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export const sliderSeparatorValues = ["comma", "period", "space", "none"] as const;
+export type SliderSeparator = (typeof sliderSeparatorValues)[number];
+
+export const DEFAULT_SLIDER_MIN = 0;
+export const DEFAULT_SLIDER_MAX = 100;
+export const DEFAULT_SLIDER_STEP = 1;
+
+/* -------------------------------------------------------------------------- */
 /* Address                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -174,6 +187,37 @@ export const defaultAddressPages: AddressSubPageDefault[] = [
   { key: "state", label: "State", placeholder: "", required: false, hidden: false, order: 4 },
   { key: "zip", label: "Zip", placeholder: "", required: false, hidden: false, order: 5 },
   { key: "country", label: "Country", placeholder: "", required: false, hidden: false, order: 6 },
+];
+
+/* -------------------------------------------------------------------------- */
+/* Contact Info                                                               */
+/* -------------------------------------------------------------------------- */
+
+export const contactInfoPageKeys = [
+  "firstName",
+  "lastName",
+  "email",
+  "phone",
+  "company",
+] as const;
+
+export type ContactInfoPageKey = (typeof contactInfoPageKeys)[number];
+
+export interface ContactInfoSubPageDefault {
+  key: ContactInfoPageKey;
+  label: string;
+  placeholder: string;
+  required: boolean;
+  hidden: boolean;
+  order: number;
+}
+
+export const defaultContactInfoPages: ContactInfoSubPageDefault[] = [
+  { key: "firstName", label: "First name", placeholder: "", required: false, hidden: false, order: 1 },
+  { key: "lastName", label: "Last name", placeholder: "", required: false, hidden: false, order: 2 },
+  { key: "email", label: "Email", placeholder: "", required: false, hidden: false, order: 3 },
+  { key: "phone", label: "Phone number", placeholder: "", required: false, hidden: false, order: 4 },
+  { key: "company", label: "Company", placeholder: "", required: false, hidden: false, order: 5 },
 ];
 
 /* -------------------------------------------------------------------------- */
