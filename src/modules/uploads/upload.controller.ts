@@ -49,20 +49,44 @@ export const uploadImage: RequestHandler = asyncHandler(async (req: Request, res
   }
 
   const file = req.file;
-  const result = await imagekit.uploadImageToImageKit(
-    file.buffer,
-    file.originalname,
-    file.mimetype
-  );
+
+  if (imagekit.isImageKitConfigured()) {
+    const result = await imagekit.uploadImageToImageKit(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      "/form-builder"
+    );
+
+    sendSuccess(
+      res,
+      {
+        url: result.url,
+        thumbnailUrl: result.thumbnailUrl,
+        fileId: result.fileId,
+        width: result.width,
+        height: result.height,
+      },
+      "Image uploaded successfully",
+      httpStatus.CREATED
+    );
+    return;
+  }
+
+  // Graceful local fallback if IMAGEKIT_PRIVATE_KEY is not set in environment
+  const fileId = nanoid();
+  const ext = path.extname(file.originalname);
+  const filename = `${fileId}${ext}`;
+  const filePath = path.join(uploadDir, filename);
+
+  fs.writeFileSync(filePath, file.buffer);
 
   sendSuccess(
     res,
     {
-      url: result.url,
-      thumbnailUrl: result.thumbnailUrl,
-      fileId: result.fileId,
-      width: result.width,
-      height: result.height,
+      url: `/api/v1/uploads/${fileId}`,
+      thumbnailUrl: `/api/v1/uploads/${fileId}`,
+      fileId,
     },
     "Image uploaded successfully",
     httpStatus.CREATED

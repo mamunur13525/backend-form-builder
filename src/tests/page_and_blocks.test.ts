@@ -189,6 +189,35 @@ describe("Page and Multi-Block Architecture", () => {
     expect(reorderedBlocks.body.data[1]._id).toBe(blockAId);
     expect(reorderedBlocks.body.data[1].order).toBe(2);
 
+    // Verify reloading the full form also returns questions/blocks in the reordered state
+    const formWithReorderedBlocks = await api
+      .get(`/api/v1/forms/${formId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+    const targetPage = formWithReorderedBlocks.body.data.pages.find((p: any) => p._id === pageId);
+    expect(targetPage.blocks[0]._id).toBe(blockBId);
+    expect(targetPage.blocks[0].order).toBe(1);
+    expect(targetPage.questions[0]._id).toBe(blockBId);
+    expect(targetPage.questions[0].order).toBe(1);
+
+    // Reorder back using PATCH /pages/:pageId with questions array (as the UI does)
+    const reversedQuestions = [
+      { ...reorderedBlocks.body.data[1], order: 1 },
+      { ...reorderedBlocks.body.data[0], order: 2 },
+    ];
+    const pageUpdateRes = await api
+      .patch(`/api/v1/forms/${formId}/pages/${pageId}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ questions: reversedQuestions });
+    expect(pageUpdateRes.status).toBe(200);
+
+    // Verify reloading the form reflects the update made via questions array
+    const formAfterPageUpdate = await api
+      .get(`/api/v1/forms/${formId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+    const targetPageAfterUpdate = formAfterPageUpdate.body.data.pages.find((p: any) => p._id === pageId);
+    expect(targetPageAfterUpdate.blocks[0]._id).toBe(blockAId);
+    expect(targetPageAfterUpdate.questions[0]._id).toBe(blockAId);
+
     // Delete Block B
     const deleteRes = await api
       .delete(`/api/v1/forms/${formId}/pages/${pageId}/blocks/${blockBId}`)
@@ -302,5 +331,140 @@ describe("Page and Multi-Block Architecture", () => {
       .delete(`/api/v1/forms/${formId}/pages/${pId}/questions/${q1Id}`)
       .set("Authorization", `Bearer ${authToken}`);
     expect(delRes.status).toBe(200);
+  });
+
+  it("should update page with contactInfo questions and settings without validation errors", async () => {
+    // Create page
+    const pageRes = await api
+      .post(`/api/v1/forms/${formId}/pages`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ title: "Contact Page", type: "contactInfo" });
+    expect(pageRes.status).toBe(201);
+    const pId = pageRes.body.data._id;
+
+    // PATCH page with contactInfo settings and questions (simulating user curl)
+    const patchRes = await api
+      .patch(`/api/v1/forms/${formId}/pages/${pId}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        questions: [
+          {
+            questionKey: "block_test_123",
+            blockKey: "block_test_123",
+            type: "contactInfo",
+            title: "Contact Info",
+            required: false,
+            order: 1,
+            options: [],
+            settings: {
+              contactInfo: {
+                pages: [
+                  { key: "firstName", label: "First name", required: false, hidden: false, order: 1 },
+                  { key: "lastName", label: "Last name", required: false, hidden: false, order: 2 },
+                  { key: "email", label: "Email", required: false, hidden: false, order: 3 },
+                  { key: "phone", label: "Phone number", required: false, hidden: false, order: 4 },
+                  { key: "company", label: "Company", required: false, hidden: false, order: 5 },
+                ],
+              },
+            },
+            isActive: true,
+          },
+        ],
+        blocks: [
+          {
+            questionKey: "block_test_123",
+            blockKey: "block_test_123",
+            type: "contactInfo",
+            title: "Contact Info",
+            required: false,
+            order: 1,
+            options: [],
+            settings: {
+              contactInfo: {
+                pages: [
+                  { key: "firstName", label: "First name", required: false, hidden: false, order: 1 },
+                  { key: "lastName", label: "Last name", required: false, hidden: false, order: 2 },
+                  { key: "email", label: "Email", required: false, hidden: false, order: 3 },
+                  { key: "phone", label: "Phone number", required: false, hidden: false, order: 4 },
+                  { key: "company", label: "Company", required: false, hidden: false, order: 5 },
+                ],
+              },
+            },
+            isActive: true,
+          },
+        ],
+        settings: {
+          contactInfo: {
+            pages: [
+              { key: "firstName", label: "First name", placeholder: "", required: false, hidden: false, order: 1 },
+              { key: "lastName", label: "Last name", placeholder: "", required: false, hidden: false, order: 2 },
+              { key: "email", label: "Email", placeholder: "", required: false, hidden: false, order: 3 },
+              { key: "phone", label: "Phone number", placeholder: "", required: false, hidden: false, order: 4 },
+              { key: "company", label: "Company", placeholder: "", required: false, hidden: false, order: 5 },
+            ],
+          },
+        },
+      });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.success).toBe(true);
+    expect(patchRes.body.data.settings?.contactInfo?.pages).toHaveLength(5);
+  });
+
+  it("should create page with defaultCountry: null in phone settings without validation errors", async () => {
+    const postRes = await api
+      .post(`/api/v1/forms/${formId}/pages`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        type: "contactInfo",
+        title: "Contact Info",
+        description: "",
+        label: "Contact Info",
+        helperText: "",
+        placeholder: "",
+        required: false,
+        options: [],
+        appearance: { width: "full", icon: "" },
+        coverImage: null,
+        settings: {
+          contactInfo: {
+            pages: [
+              { key: "firstName", label: "First name", placeholder: "", required: false, hidden: false, order: 1 },
+              { key: "lastName", label: "Last name", placeholder: "", required: false, hidden: false, order: 2 },
+              { key: "email", label: "Email", placeholder: "", required: false, hidden: false, order: 3 },
+              { key: "phone", label: "Phone number", placeholder: "", required: false, hidden: false, order: 4 },
+              { key: "company", label: "Company", placeholder: "", required: false, hidden: false, order: 5 },
+            ],
+            phone: { phoneVerification: false, countryCodeMode: "auto", defaultCountry: null },
+          },
+          phone: { phoneVerification: false, countryCodeMode: "auto", defaultCountry: null },
+        },
+        blocks: [
+          {
+            questionKey: "block_test_456",
+            blockKey: "block_test_456",
+            type: "contactInfo",
+            title: "Contact Info",
+            required: false,
+            order: 1,
+            options: [],
+            settings: {
+              contactInfo: {
+                pages: [
+                  { key: "firstName", label: "First name", placeholder: "", required: false, hidden: false, order: 1 },
+                ],
+                phone: { phoneVerification: false, countryCodeMode: "auto", defaultCountry: null },
+              },
+              phone: { phoneVerification: false, countryCodeMode: "auto", defaultCountry: null },
+            },
+            appearance: { width: "full", icon: "" },
+            isActive: true,
+          },
+        ],
+      });
+
+    expect(postRes.status).toBe(201);
+    expect(postRes.body.success).toBe(true);
+    expect(postRes.body.data._id).toBeDefined();
   });
 });

@@ -33,8 +33,21 @@ export const submitForm: RequestHandler = asyncHandler(async (req: Request, res:
 });
 
 export const saveDraft: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const result = await publicFormService.saveDraft(req.params.slug as string, req.body);
+  const result = await publicFormService.saveDraft(
+    req.params.slug as string,
+    req.body,
+    { ip: req.ip, userAgent: req.headers["user-agent"], referrer: req.headers["referer"] }
+  );
   sendSuccess(res, result, "Draft saved successfully");
+});
+
+export const trackView: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const result = await publicFormService.trackView(
+    req.params.slug as string,
+    req.body,
+    { ip: req.ip, userAgent: req.headers["user-agent"], referrer: req.headers["referer"] }
+  );
+  sendSuccess(res, result, "Form view tracked successfully");
 });
 
 export const getSubmitStatus: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {

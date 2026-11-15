@@ -7,6 +7,7 @@ export interface IFormResponse extends Document {
   formVersionId?: mongoose.Types.ObjectId;
   respondentId?: IUser["_id"];
   sessionId: string;
+  status: "completed" | "partial";
   answers: {
     pageKey: string;
     blockKey?: string;
@@ -43,6 +44,7 @@ const formResponseSchema = new Schema<IFormResponse>(
 
     respondentId: { type: Schema.Types.ObjectId, ref: "User" },
     sessionId: { type: String, default: "" },
+    status: { type: String, enum: ["completed", "partial"], default: "completed", index: true },
 
     answers: [
       {
@@ -81,5 +83,7 @@ const formResponseSchema = new Schema<IFormResponse>(
 );
 
 formResponseSchema.index({ formId: 1, submittedAt: -1 });
+formResponseSchema.index({ formId: 1, status: 1, submittedAt: -1 });
+formResponseSchema.index({ formId: 1, sessionId: 1 });
 
 export const FormResponse = mongoose.model<IFormResponse>("FormResponse", formResponseSchema);

@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import { Form, normalizeFormSettings } from "../../models/Form";
 import { FormVersion } from "../../models/FormVersion";
 import { FormResponse } from "../../models/FormResponse";
+import { FormView } from "../../models/FormView";
 import { findLogicsByFormId } from "../logic/logic.repository";
 import { resolveFormLogic } from "../../utils/form-logic/evaluate";
 import {
@@ -103,62 +104,66 @@ export const buildPublicFormSettings = (stored: any) => {
 };
 
 const normalizePagesWithBlocks = (pages: any[]): any[] => {
-  return (pages || []).map((page: any) => {
-    const title = page.title !== undefined ? page.title : (page.label || "");
-    const description = page.description !== undefined ? page.description : (page.helperText || "");
-    const label = page.label !== undefined ? page.label : title;
-    const helperText = page.helperText !== undefined ? page.helperText : description;
+  return (pages || [])
+    .slice()
+    .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+    .map((page: any) => {
+      const title = page.title !== undefined ? page.title : (page.label || "");
+      const description = page.description !== undefined ? page.description : (page.helperText || "");
+      const label = page.label !== undefined ? page.label : title;
+      const helperText = page.helperText !== undefined ? page.helperText : description;
 
-    let blocks = page.blocks;
-    if (!Array.isArray(blocks) || blocks.length === 0) {
-      if (page.type) {
-        blocks = [
-          {
-            _id: page._id,
-            blockKey: page.pageKey,
-            questionKey: page.pageKey,
-            title: "", // single question has no question title; page has title
-            description: "", // remove description from question
-            label: "",
-            helperText: "",
-            placeholder: page.placeholder || "",
-            type: page.type,
-            required: page.required || false,
-            order: 1,
-            coverImage: page.coverImage,
-            options: page.options || [],
-            validation: page.validation || {},
-            settings: page.settings || {},
-            appearance: page.appearance || { width: "full", icon: "" },
-            isActive: page.isActive !== false,
-          },
-        ];
+      let blocks = page.blocks || page.questions;
+      if (!Array.isArray(blocks) || blocks.length === 0) {
+        if (page.type) {
+          blocks = [
+            {
+              _id: page._id,
+              blockKey: page.pageKey,
+              questionKey: page.pageKey,
+              title: "", // single question has no question title; page has title
+              description: "", // remove description from question
+              label: "",
+              helperText: "",
+              placeholder: page.placeholder || "",
+              type: page.type,
+              required: page.required || false,
+              order: 1,
+              coverImage: page.coverImage,
+              options: page.options || [],
+              validation: page.validation || {},
+              settings: page.settings || {},
+              appearance: page.appearance || { width: "full", icon: "" },
+              isActive: page.isActive !== false,
+            },
+          ];
+        } else {
+          blocks = [];
+        }
       } else {
-        blocks = [];
+        const sortedBlocks = [...blocks].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+        const hasMultiple = sortedBlocks.length > 1;
+        blocks = sortedBlocks.map((b: any) => ({
+          ...b,
+          // Question title is conditional: if page has 1 question, no question title; if multiple, question has title
+          title: hasMultiple ? (b.title !== undefined ? b.title : (b.label || "")) : "",
+          label: hasMultiple ? (b.label !== undefined ? b.label : (b.title || "")) : "",
+          // Remove description from question
+          description: "",
+          helperText: "",
+        }));
       }
-    } else {
-      const hasMultiple = blocks.length > 1;
-      blocks = blocks.map((b: any) => ({
-        ...b,
-        // Question title is conditional: if page has 1 question, no question title; if multiple, question has title
-        title: hasMultiple ? (b.title !== undefined ? b.title : (b.label || "")) : "",
-        label: hasMultiple ? (b.label !== undefined ? b.label : (b.title || "")) : "",
-        // Remove description from question
-        description: "",
-        helperText: "",
-      }));
-    }
 
-    return {
-      ...page,
-      title,
-      description,
-      label,
-      helperText,
-      blocks,
-      questions: blocks,
-    };
-  });
+      return {
+        ...page,
+        title,
+        description,
+        label,
+        helperText,
+        blocks,
+        questions: blocks,
+      };
+    });
 };
 
 export const getPublicForm = async (slugOrId: string): Promise<any> => {
@@ -273,6 +278,7 @@ export const submitForm = async (
     ...a,
     pageKey: a.pageKey || a.blockKey || "",
     blockKey: a.blockKey || a.pageKey || "",
+    questionKey: a.questionKey || a.blockKey || a.pageKey || "",
     label: a.label || a.title || "",
     title: a.title || a.label || "",
   }));
@@ -309,19 +315,50 @@ export const submitForm = async (
     computedVariables = undefined;
   }
 
-  const response = await FormResponse.create({
-    formId: form._id,
-    formVersionId: form.publishedVersionId,
-    answers: normalizedAnswers,
-    computedVariables,
-    sessionId: data.sessionId || `session_${nanoid()}`,
-    metadata: {
-      ipAddress: metadata?.ip || "",
-      userAgent: metadata?.userAgent || "",
-      referrer: metadata?.referrer || "",
-    },
-    submittedAt: new Date(),
-  });
+  let response: any;
+  if (data.sessionId) {
+    response = await FormResponse.findOneAndUpdate(
+      { formId: form._id, sessionId: data.sessionId },
+      {
+        $set: {
+          formVersionId: form.publishedVersionId,
+          answers: normalizedAnswers,
+          computedVariables,
+          status: "completed",
+          metadata: {
+            ipAddress: metadata?.ip || "",
+            userAgent: metadata?.userAgent || "",
+            referrer: metadata?.referrer || "",
+          },
+          submittedAt: new Date(),
+        },
+      },
+      { returnDocument: "after", upsert: true }
+    );
+  } else {
+    response = await FormResponse.create({
+      formId: form._id,
+      formVersionId: form.publishedVersionId,
+      answers: normalizedAnswers,
+      computedVariables,
+      sessionId: `session_${nanoid()}`,
+      status: "completed",
+      metadata: {
+        ipAddress: metadata?.ip || "",
+        userAgent: metadata?.userAgent || "",
+        referrer: metadata?.referrer || "",
+      },
+      submittedAt: new Date(),
+    });
+  }
+
+  // Mark visit as completed in background
+  if (data.sessionId) {
+    FormView.findOneAndUpdate(
+      { formId: form._id, sessionId: data.sessionId },
+      { $set: { started: true, completed: true, completedAt: new Date() } }
+    ).catch(() => {});
+  }
 
   // Dispatch third-party integrations (Slack, Discord, Telegram, Zapier, etc.)
   // Runs in background so it never slows down or blocks response to respondent
@@ -344,17 +381,63 @@ export const submitForm = async (
 
 export const saveDraft = async (
   slugOrId: string,
-  data: { answers: any[]; sessionId?: string }
+  data: { answers: any[]; sessionId?: string },
+  metadata?: any
 ): Promise<any> => {
   const form = await findPublicForm(slugOrId);
+  const sessionId = data.sessionId || `session_${nanoid()}`;
 
-  const response = await FormResponse.create({
-    formId: form._id,
-    formVersionId: form.publishedVersionId,
-    answers: data.answers,
-    sessionId: data.sessionId || `draft_${nanoid()}`,
-    submittedAt: new Date(),
-  });
+  const normalizedAnswers = (data.answers ?? []).map((a: any) => ({
+    ...a,
+    pageKey: a.pageKey || a.blockKey || "",
+    blockKey: a.blockKey || a.pageKey || "",
+    questionKey: a.questionKey || a.blockKey || a.pageKey || "",
+    label: a.label || a.title || "",
+    title: a.title || a.label || "",
+  }));
+
+  let response: any;
+  if (data.sessionId) {
+    response = await FormResponse.findOneAndUpdate(
+      { formId: form._id, sessionId: data.sessionId },
+      {
+        $set: {
+          formVersionId: form.publishedVersionId,
+          answers: normalizedAnswers,
+          status: "partial",
+          submittedAt: new Date(),
+          ...(metadata ? {
+            metadata: {
+              ipAddress: metadata?.ip || "",
+              userAgent: metadata?.userAgent || "",
+              referrer: metadata?.referrer || "",
+            }
+          } : {})
+        },
+      },
+      { returnDocument: "after", upsert: true }
+    );
+  } else {
+    response = await FormResponse.create({
+      formId: form._id,
+      formVersionId: form.publishedVersionId,
+      answers: normalizedAnswers,
+      sessionId,
+      status: "partial",
+      metadata: {
+        ipAddress: metadata?.ip || "",
+        userAgent: metadata?.userAgent || "",
+        referrer: metadata?.referrer || "",
+      },
+      submittedAt: new Date(),
+    });
+  }
+
+  // Mark visit as started in background
+  FormView.findOneAndUpdate(
+    { formId: form._id, sessionId },
+    { $set: { started: true }, $setOnInsert: { startedAt: new Date() } }
+  ).catch(() => {});
 
   return {
     submissionId: response._id,
@@ -362,6 +445,41 @@ export const saveDraft = async (
     sessionId: response.sessionId,
     message: "Draft saved successfully",
   };
+};
+
+export const trackView = async (
+  slugOrId: string,
+  data: { sessionId?: string; device?: string; referrer?: string },
+  metadata?: any
+): Promise<any> => {
+  const form = await findPublicForm(slugOrId);
+  const sessionId = data.sessionId || `session_${nanoid()}`;
+
+  let device: "desktop" | "mobile" | "tablet" = "desktop";
+  if (data.device === "mobile" || data.device === "tablet" || data.device === "desktop") {
+    device = data.device;
+  } else {
+    const ua = metadata?.userAgent || "";
+    if (/tablet|ipad/i.test(ua)) device = "tablet";
+    else if (/mobile|android|iphone/i.test(ua)) device = "mobile";
+  }
+
+  const view = await FormView.findOneAndUpdate(
+    { formId: form._id, sessionId },
+    {
+      $setOnInsert: {
+        formId: form._id,
+        sessionId,
+        device,
+        ipAddress: metadata?.ip || "",
+        userAgent: metadata?.userAgent || "",
+        referrer: data.referrer || metadata?.referrer || "",
+      },
+    },
+    { returnDocument: "after", upsert: true }
+  );
+
+  return { success: true, sessionId: view.sessionId };
 };
 
 /**

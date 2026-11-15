@@ -224,6 +224,24 @@ describe("Typeform API Endpoints", () => {
         .send({ pageIds: [page2Id, pageId] });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+
+      // Verify reloading the form returns pages in the new reordered state
+      const formRes = await api
+        .get(`/api/v1/forms/${formId}`)
+        .set("Authorization", `Bearer ${authToken}`);
+      expect(formRes.status).toBe(200);
+      expect(formRes.body.data.pages[0]._id).toBe(page2Id);
+      expect(formRes.body.data.pages[0].order).toBe(1);
+      expect(formRes.body.data.pages[1]._id).toBe(pageId);
+      expect(formRes.body.data.pages[1].order).toBe(2);
+
+      // Verify GET /pages also returns pages in the new reordered state
+      const pagesRes = await api
+        .get(`/api/v1/forms/${formId}/pages`)
+        .set("Authorization", `Bearer ${authToken}`);
+      expect(pagesRes.status).toBe(200);
+      expect(pagesRes.body.data[0]._id).toBe(page2Id);
+      expect(pagesRes.body.data[1]._id).toBe(pageId);
     });
 
     it("should fail when creating page with order in body", async () => {
@@ -433,6 +451,31 @@ describe("Typeform API Endpoints", () => {
         .set("Authorization", `Bearer ${authToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+
+    it("should get active workspace", async () => {
+      const res = await api
+        .get("/api/v1/workspaces/active")
+        .set("Authorization", `Bearer ${authToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty("workspaceId");
+    });
+
+    it("should set active workspace", async () => {
+      const created = await api
+        .post("/api/v1/workspaces")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Active WS" });
+      const targetWorkspaceId = created.body.data._id;
+
+      const res = await api
+        .put("/api/v1/workspaces/active")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ workspaceId: targetWorkspaceId });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.workspaceId).toBe(targetWorkspaceId);
     });
   });
 });

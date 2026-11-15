@@ -18,7 +18,7 @@ export const fontSizes = ["small", "medium", "large"] as const;
 export type FontSize = (typeof fontSizes)[number];
 
 /** Corner radius preset applied to inputs, choice options and buttons. */
-export const cornerRadii = ["small", "medium", "large"] as const;
+export const cornerRadii = ["none", "small", "medium", "large", "full"] as const;
 
 export type CornerRadius = (typeof cornerRadii)[number];
 

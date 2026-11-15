@@ -4,13 +4,14 @@ const answerSchema = z
   .object({
     pageKey: z.string().optional(),
     blockKey: z.string().optional(),
+    questionKey: z.string().optional(),
     label: z.string().optional(),
     title: z.string().optional(),
     type: z.string().min(1),
     value: z.any(),
   })
-  .refine((a) => Boolean(a.pageKey || a.blockKey), {
-    message: "Either pageKey or blockKey is required",
+  .refine((a) => Boolean(a.pageKey || a.blockKey || a.questionKey), {
+    message: "Either pageKey, blockKey, or questionKey is required",
   });
 
 export const submitFormSchema = {

@@ -17,6 +17,7 @@ router.get("/forms/:slug/theme", validate(slugParamSchema), publicFormController
 router.get("/forms/:slug/preview", validate(slugParamSchema), publicFormController.getFormPreview);
 router.post("/forms/:slug/submit", publicFormRateLimiter, validate(submitFormSchema), publicFormController.submitForm);
 router.post("/forms/:slug/save-draft", validate(saveDraftSchema), publicFormController.saveDraft);
+router.post("/forms/:slug/track-view", publicFormController.trackView);
 router.get("/forms/:slug/submit-status/:submissionId", validate(submissionIdParamSchema), publicFormController.getSubmitStatus);
 
 export default router;

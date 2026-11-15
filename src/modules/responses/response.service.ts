@@ -44,20 +44,44 @@ export const deleteResponse = async (formId: string, responseId: string): Promis
   await responseRepo.deleteResponse(responseId);
 };
 
-export const exportResponses = async (formId: string, format: string = "json"): Promise<any> => {
+export const exportResponses = async (
+  formId: string,
+  format: string = "json",
+  status?: string
+): Promise<any> => {
+  const filter: Record<string, any> = {};
+  if (status === "completed") {
+    filter.$or = [{ status: "completed" }, { status: { $exists: false } }, { status: null }];
+  } else if (status === "partial") {
+    filter.status = "partial";
+  }
+
   const responses = await responseRepo.findResponsesByFormId(
     formId,
     0,
     10000,
-    { submittedAt: -1 }
+    { submittedAt: -1 },
+    filter
   );
 
   if (format === "csv") {
     // For CSV, flatten the answers
-    const headers = ["submittedAt", "sessionId", ...new Set(responses.flatMap(r => r.answers.map(a => a.pageKey)))];
-    const rows = responses.map(r => {
-      const row: Record<string, any> = { submittedAt: r.submittedAt, sessionId: r.sessionId };
-      r.answers.forEach(a => { row[a.pageKey] = a.value; });
+    const headers = [
+      "submittedAt",
+      "sessionId",
+      "status",
+      ...new Set(responses.flatMap((r) => r.answers.map((a) => a.questionKey || a.blockKey || a.pageKey))),
+    ];
+    const rows = responses.map((r) => {
+      const row: Record<string, any> = {
+        submittedAt: r.submittedAt,
+        sessionId: r.sessionId,
+        status: (r as any).status || "completed",
+      };
+      r.answers.forEach((a) => {
+        const key = a.questionKey || a.blockKey || a.pageKey;
+        if (key) row[key] = a.value;
+      });
       return row;
     });
     return { headers, rows };

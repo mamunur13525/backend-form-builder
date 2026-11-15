@@ -127,6 +127,7 @@ export const createBlock = async (
   };
 
   page.blocks.push(block);
+  page.questions = page.blocks;
 
   draftVersion.markModified("formSchema");
   await draftVersion.save();
@@ -240,6 +241,7 @@ export const updateBlock = async (
 
       Object.assign(block, data, { updatedAt: new Date() });
       if (block._id && !block.id) block.id = block._id.toString();
+      page.questions = page.blocks;
 
       draftVersion.markModified("formSchema");
       await draftVersion.save();
@@ -282,6 +284,7 @@ export const deleteBlock = async (
     });
 
     if (page.blocks.length !== initialLength) {
+      page.questions = page.blocks;
       draftVersion.markModified("formSchema");
       await draftVersion.save();
 
@@ -310,16 +313,15 @@ export const reorderBlocks = async (
   const searchPages = targetPage ? [targetPage, ...pages.filter((p: any) => p !== targetPage)] : pages;
 
   for (const page of searchPages) {
-    const blocks = page.blocks || [];
+    const blocks = page.blocks && page.blocks.length > 0 ? page.blocks : (page.questions || []);
+    page.blocks = blocks;
     let updatedAny = false;
 
     blockIds.forEach((id, index) => {
-      const filter = buildLookupFilter(id);
       const target = blocks.find((b: any) => {
-        if (filter._id) {
-          return b._id && b._id.toString() === filter._id.toString();
-        }
-        return b.blockKey === filter.key;
+        const bId = b._id?.toString() || b.id?.toString() || "";
+        const bKey = b.questionKey || b.blockKey || "";
+        return bId === id || bKey === id;
       });
       if (target) {
         target.order = index + 1;
@@ -328,7 +330,8 @@ export const reorderBlocks = async (
     });
 
     if (updatedAny) {
-      page.blocks.sort((a: any, b: any) => a.order - b.order);
+      page.blocks.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+      page.questions = page.blocks;
       draftVersion.markModified("formSchema");
       await draftVersion.save();
 

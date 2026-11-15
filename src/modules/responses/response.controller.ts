@@ -6,8 +6,14 @@ import * as responseService from "./response.service";
 
 export const getResponses: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { skip, limit, sort } = getPaginationParams(req.query as any);
+  const filter: Record<string, any> = {};
+  if (req.query.status === "completed") {
+    filter.$or = [{ status: "completed" }, { status: { $exists: false } }, { status: null }];
+  } else if (req.query.status === "partial") {
+    filter.status = "partial";
+  }
   const result = await responseService.getResponsesByFormId(
-    req.params.formId as string, skip, limit, sort
+    req.params.formId as string, skip, limit, sort, filter
   );
   sendSuccess(res, result.responses, "Responses retrieved successfully");
 });
@@ -33,7 +39,8 @@ export const updateResponse: RequestHandler = asyncHandler(async (req: Request, 
 
 export const exportResponses: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const format = (req.query.format as string) || "json";
-  const result = await responseService.exportResponses(req.params.formId as string, format);
+  const status = req.query.status as string;
+  const result = await responseService.exportResponses(req.params.formId as string, format, status);
   sendSuccess(res, result, "Responses exported successfully");
 });
 

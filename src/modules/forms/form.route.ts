@@ -9,6 +9,7 @@ import {
   updateFormSettingsSchema,
   updateFormThemeSchema,
   updateFormShareSchema,
+  updateFormAccessSchema,
 } from "./form.validation";
 
 const router: ExpressRouter = Router();
@@ -30,6 +31,8 @@ router.patch("/:formId/cancel", validate(formIdParamSchema), formController.canc
 router.post("/:formId/discard", validate(formIdParamSchema), formController.discardDraft);
 router.get("/:formId/versions", validate(formIdParamSchema), formController.getFormVersions);
 router.get("/:formId/slug", validate(formIdParamSchema), formController.getFormSlug);
+router.get("/:formId/access", validate(formIdParamSchema), formController.getFormAccess);
+router.patch("/:formId/access", validate(updateFormAccessSchema), formController.updateFormAccess);
 router.patch("/:formId/settings", validate(updateFormSettingsSchema), formController.updateFormSettings);
 router.patch("/:formId/theme", validate(updateFormThemeSchema), formController.updateFormTheme);
 router.patch("/:formId/share", validate(updateFormShareSchema), formController.updateFormShare);

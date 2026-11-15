@@ -43,13 +43,15 @@ export const getResponseStats = async (formId: string): Promise<any> => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [total, todayResponses, uniqueRespondents] = await Promise.all([
+  const [total, todayResponses, uniqueRespondents, completedCount, partialCount] = await Promise.all([
     FormResponse.countDocuments({ formId }),
     FormResponse.countDocuments({ formId, submittedAt: { $gte: today } }),
     FormResponse.distinct("respondentId", { formId, respondentId: { $ne: null } }),
+    FormResponse.countDocuments({ formId, $or: [{ status: "completed" }, { status: { $exists: false } }, { status: null }] }),
+    FormResponse.countDocuments({ formId, status: "partial" }),
   ]);
 
-  return { total, todayResponses, uniqueRespondents: uniqueRespondents.length };
+  return { total, todayResponses, uniqueRespondents: uniqueRespondents.length, completedCount, partialCount };
 };
 
 /**

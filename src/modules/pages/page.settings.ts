@@ -1,6 +1,7 @@
 import { IPageSettings } from "../../models/Form";
 import {
   defaultAddressPages,
+  defaultContactInfoPages,
   DEFAULT_MAX_UPLOAD_SIZE_MB,
   DEFAULT_OPTIONS_PER_ROW_DESKTOP,
   DEFAULT_OPTIONS_PER_ROW_MOBILE,
@@ -8,6 +9,9 @@ import {
   DEFAULT_RATING_STYLE,
   DEFAULT_SCALE_MAX,
   DEFAULT_SCALE_MIN,
+  DEFAULT_SLIDER_MAX,
+  DEFAULT_SLIDER_MIN,
+  DEFAULT_SLIDER_STEP,
   PageType,
 } from "../../constants/pageTypes";
 
@@ -21,8 +25,10 @@ const settingsGroupByType: Partial<Record<PageType, keyof IPageSettings>> = {
   radio: "choice",
   checkbox: "choice",
   address: "address",
+  contactInfo: "contactInfo",
   rating: "rating",
   opinionScale: "opinionScale",
+  slider: "slider",
   file: "upload",
   matrix: "matrix",
 };
@@ -68,6 +74,9 @@ const buildDefaults = (group: keyof IPageSettings, type: string): IPageSettings 
     case "address":
       return { address: { pages: defaultAddressPages.map((f) => ({ ...f })) } };
 
+    case "contactInfo":
+      return { contactInfo: { pages: defaultContactInfoPages.map((f) => ({ ...f })) } };
+
     case "rating":
       return { rating: { style: DEFAULT_RATING_STYLE, max: DEFAULT_RATING_MAX } };
 
@@ -78,6 +87,21 @@ const buildDefaults = (group: keyof IPageSettings, type: string): IPageSettings 
           max: DEFAULT_SCALE_MAX,
           leftLabel: "",
           rightLabel: "",
+        },
+      };
+
+    case "slider":
+      return {
+        slider: {
+          min: DEFAULT_SLIDER_MIN,
+          max: DEFAULT_SLIDER_MAX,
+          step: DEFAULT_SLIDER_STEP,
+          rangeMode: false,
+          defaultLow: 0,
+          defaultHigh: 100,
+          prefix: "",
+          suffix: "",
+          thousandSeparator: "comma",
         },
       };
 
