@@ -2,76 +2,21 @@ import { ApiError } from "../../utils/ApiError";
 import { httpStatus } from "../../constants/httpStatus";
 import { nanoid } from "nanoid";
 import { dispatchServerIntegrations } from "./integration-dispatcher";
-import mongoose from "mongoose";
 import { Form, normalizeFormSettings } from "../../models/Form";
 import { FormVersion } from "../../models/FormVersion";
 import { FormResponse } from "../../models/FormResponse";
 import { FormView } from "../../models/FormView";
 import { findLogicsByFormId } from "../logic/logic.repository";
 import { resolveFormLogic } from "../../utils/form-logic/evaluate";
-import {
-  ClosedFormStatus,
-  closedFormReason,
-  formStatus,
-  isClosedFormStatus,
-} from "../../constants/status";
+import { formStatus } from "../../constants/status";
 import { buildFormTheme } from "../forms/form.theme";
 import * as billingService from "../billing/billing.service";
-
-const buildFormLookupQuery = (slugOrId: string) => {
-  if (mongoose.Types.ObjectId.isValid(slugOrId)) {
-    return { $or: [{ slug: slugOrId }, { _id: slugOrId }] };
-  }
-  return { slug: slugOrId };
-};
-
-/**
- * Used for forms that were never live (draft/archived) and for slugs that do
- * not exist, so the two cases stay indistinguishable to the public.
- */
-const notFoundError = () =>
-  new ApiError(httpStatus.NOT_FOUND, "Form not found or not published");
-
-/**
- * A form that was live and is now closed exists as far as the respondent is
- * concerned, so it answers 410 with a machine-readable reason the client can
- * use to render a closed-form screen.
- */
-const closedFormError = (status: ClosedFormStatus, title: string) => {
-  const reason = closedFormReason[status];
-  return new ApiError(httpStatus.GONE, reason.message, [
-    { code: reason.code, status, title },
-  ]);
-};
-
-const findPublicForm = async (slugOrId: string) => {
-  const form = await Form.findOne(buildFormLookupQuery(slugOrId)).lean();
-  if (!form) {
-    throw notFoundError();
-  }
-
-  if (isClosedFormStatus(form.status)) {
-    throw closedFormError(form.status, form.title);
-  }
-
-  if (form.status !== formStatus.PUBLISHED || !form.publishedVersionId) {
-    throw notFoundError();
-  }
-
-  // Re-stated so callers get a non-nullable publishedVersionId.
-  return { ...form, publishedVersionId: form.publishedVersionId };
-};
-
-const findPublicFormWithVersion = async (slugOrId: string) => {
-  const form = await findPublicForm(slugOrId);
-
-  const version = await FormVersion.findById(form.publishedVersionId).lean();
-  if (!version) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Published form version not found");
-  }
-
-  return { form, version };
-};
+import * as paymentService from "../payments/payment.service";
+import {
+  buildFormLookupQuery,
+  findPublicForm,
+  findPublicFormWithVersion,
+} from "./public-form.lookup";
 
 /**
  * Settings a respondent-facing client needs to render/interact with the form.
@@ -286,10 +231,11 @@ export const submitForm = async (
   // Recompute calculation variables server-side from the published version's
   // logic rules so respondents cannot submit spoofed score/price values.
   // Any failure here must never block the submission itself.
+  const version = await FormVersion.findById(form.publishedVersionId).lean();
   let computedVariables: { name: string; value: any }[] | undefined;
-  try {
-    const version = await FormVersion.findById(form.publishedVersionId).lean();
-    if (version) {
+  let hiddenPageKeys: Set<string> | undefined;
+  if (version) {
+    try {
       const pages = (version.formSchema.pages || []).filter(
         (p: any) => p?.isActive && p.pageKey
       );
@@ -306,14 +252,23 @@ export const submitForm = async (
         variables: settings.variables,
         rules,
       });
+      hiddenPageKeys = result.hiddenPageKeys;
       const entries = Object.entries(result.computedVariables);
       if (entries.length > 0) {
         computedVariables = entries.map(([name, value]) => ({ name, value }));
       }
+    } catch {
+      computedVariables = undefined;
     }
-  } catch {
-    computedVariables = undefined;
   }
+
+  // Payment answers are rebuilt from Stripe, never trusted from the client.
+  await paymentService.verifySubmissionPayments({
+    formId: String(form._id),
+    version,
+    answers: normalizedAnswers,
+    hiddenPageKeys,
+  });
 
   let response: any;
   if (data.sessionId) {

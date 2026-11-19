@@ -12,6 +12,10 @@ import { FormView } from "../../models/FormView";
 import { createInitialVersion, ensureDraftVersion } from "./version.helper";
 import { buildFormTheme } from "./form.theme";
 import { buildPageSettings } from "../pages/page.settings";
+import {
+  assertPaymentPagesReady,
+  loadFormAccounts,
+} from "../payments/payment-account";
 import { buildDefaultEndPageContent } from "../../constants/endPage";
 import { findLogicsByFormId } from "../logic/logic.repository";
 import { User } from "../../models/User";
@@ -552,6 +556,8 @@ export const publishForm = async (formId: string, userId?: string): Promise<Form
   if (isClosedFormStatus(form.status) && form.publishedVersionId && !form.hasUnpublishedChanges) {
     const publishedVersion = await FormVersion.findById(form.publishedVersionId);
     if (publishedVersion) {
+      const { accounts } = await loadFormAccounts(String(form._id));
+      assertPaymentPagesReady(publishedVersion.formSchema.pages as any[], accounts);
       form.status = formStatus.PUBLISHED;
       form.draftVersionId = publishedVersion._id as any;
       form.hasUnpublishedChanges = false;
@@ -565,6 +571,12 @@ export const publishForm = async (formId: string, userId?: string): Promise<Form
   }
 
   const draftVersion = await ensureDraftVersion(form);
+
+  // Never make a payment page live unless it can actually charge the owner's
+  // connected Stripe account.
+  const { accounts } = await loadFormAccounts(String(form._id));
+  assertPaymentPagesReady(draftVersion.formSchema.pages as any[], accounts);
+
   form.publishedVersionId = draftVersion._id as any;
   form.status = formStatus.PUBLISHED;
   form.hasUnpublishedChanges = false;
@@ -674,7 +686,7 @@ export const getFormSlug = async (
   }
   return {
     slug: form.slug,
-    publicUrl: `/public/forms/${form.slug}`,
+    publicUrl: `/form/${form.slug}`,
   };
 };
 

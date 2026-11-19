@@ -46,3 +46,24 @@ export const submissionIdParamSchema = {
     submissionId: z.string().min(1, "Submission ID is required"),
   }),
 };
+
+export const paymentSessionSchema = {
+  body: z.object({
+    pageKey: z.string().min(1, "pageKey is required"),
+    email: z.string().email().max(300).optional(),
+    respondentSessionId: z.string().max(200).optional(),
+  }),
+  params: z.object({
+    slug: z.string().min(1, "Slug is required"),
+  }),
+};
+
+export const verifyPaymentSessionSchema = {
+  params: z.object({
+    slug: z.string().min(1, "Slug is required"),
+    sessionId: z.string().min(1, "Session ID is required"),
+  }),
+  query: z.object({
+    pageKey: z.string().min(1, "pageKey is required"),
+  }),
+};

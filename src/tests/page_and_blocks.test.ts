@@ -1,6 +1,7 @@
 /// <reference types="jest" />
 import request from "supertest";
 import app from "../app";
+import { User } from "../models/User";
 
 const api = request(app);
 
@@ -466,5 +467,150 @@ describe("Page and Multi-Block Architecture", () => {
     expect(postRes.status).toBe(201);
     expect(postRes.body.success).toBe(true);
     expect(postRes.body.data._id).toBeDefined();
+  });
+
+  it("creates a meeting page with defaults and persists provider settings", async () => {
+    const createRes = await api
+      .post(`/api/v1/forms/${formId}/pages`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        type: "meeting",
+        title: "Book a call",
+        required: true,
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.data.type).toBe("meeting");
+    // Meetings never collect an answer, so required is forced off.
+    expect(createRes.body.data.required).toBe(false);
+    expect(createRes.body.data.settings.meeting).toEqual({
+      provider: "calcom",
+      link: "",
+      openerText: "Select the slot.",
+      prefillMappings: [],
+    });
+
+    const pageId = createRes.body.data._id;
+    const updateRes = await api
+      .patch(`/api/v1/forms/${formId}/pages/${pageId}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        settings: {
+          meeting: {
+            provider: "calendly",
+            link: "https://calendly.com/jane/intro",
+            openerText: "Pick a time",
+            prefillMappings: [
+              { id: "map_1", sourceKey: "block_name", targetKey: "name" },
+            ],
+          },
+        },
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.data.settings.meeting).toEqual({
+      provider: "calendly",
+      link: "https://calendly.com/jane/intro",
+      openerText: "Pick a time",
+      prefillMappings: [
+        { id: "map_1", sourceKey: "block_name", targetKey: "name" },
+      ],
+    });
+  });
+
+  it("creates an NPS page with defaults and persists its layout settings", async () => {
+    const createRes = await api
+      .post(`/api/v1/forms/${formId}/pages`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ type: "nps", title: "How likely are you to recommend us?" });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.data.type).toBe("nps");
+    expect(createRes.body.data.settings.nps).toEqual({
+      leftLabel: "",
+      rightLabel: "",
+      singleRowOnMobile: false,
+    });
+
+    const pageId = createRes.body.data._id;
+    const updateRes = await api
+      .patch(`/api/v1/forms/${formId}/pages/${pageId}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        settings: {
+          nps: {
+            leftLabel: "Not likely",
+            rightLabel: "Very likely",
+            singleRowOnMobile: true,
+          },
+        },
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.data.settings.nps).toEqual({
+      leftLabel: "Not likely",
+      rightLabel: "Very likely",
+      singleRowOnMobile: true,
+    });
+  });
+
+  it("creates a payment page with defaults and persists its Stripe settings", async () => {
+    const createRes = await api
+      .post(`/api/v1/forms/${formId}/pages`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ type: "payment", title: "Pay for your order" });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.data.type).toBe("payment");
+    expect(createRes.body.data.settings.payment).toEqual({
+      stripeAccountId: "",
+      currency: "usd",
+      amount: 0,
+      allowInstallments: false,
+      receiptEmailKey: "",
+    });
+
+    const pageId = createRes.body.data._id;
+
+    // Only accounts the owner connected may be charged.
+    const me = await api
+      .get("/api/v1/auth/me")
+      .set("Authorization", `Bearer ${authToken}`);
+    await User.updateOne(
+      { _id: me.body.data.id },
+      {
+        stripeAccounts: [
+          {
+            accountId: "acct_test_1234",
+            name: "Test Stripe",
+            connectedAt: new Date(),
+          },
+        ],
+      }
+    );
+
+    const updateRes = await api
+      .patch(`/api/v1/forms/${formId}/pages/${pageId}`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        settings: {
+          payment: {
+            stripeAccountId: "acct_test_1234",
+            currency: "eur",
+            amount: 2500,
+            allowInstallments: true,
+            receiptEmailKey: "block_email",
+          },
+        },
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.data.settings.payment).toEqual({
+      stripeAccountId: "acct_test_1234",
+      currency: "eur",
+      amount: 2500,
+      allowInstallments: true,
+      receiptEmailKey: "block_email",
+    });
   });
 });

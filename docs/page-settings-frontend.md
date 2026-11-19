@@ -38,10 +38,11 @@ Two new properties exist on all page objects:
 shortText  longText  email  phone  number  date  time
 radio  checkbox  select  multiSelect  dropdown
 file  rating  yesNo  url
-statement  address  opinionScale  signature  matrix
+statement  address  opinionScale  nps  signature  matrix
+meeting  payment
 ```
 
-Newly added: **`statement`**, **`dropdown`**, **`address`**, **`opinionScale`**, **`signature`**, **`matrix`**.
+Newly added: **`statement`**, **`dropdown`**, **`address`**, **`opinionScale`**, **`nps`**, **`signature`**, **`matrix`**, **`meeting`**, **`payment`**.
 
 Types with **no** settings group (only `required` + `coverImage`): `shortText`, `url`, `date`, `time`, `dropdown`, `signature`, `yesNo`, `number`, `longText`.
 
@@ -58,12 +59,15 @@ The group name is **not** the type name — `select`, `multiSelect`, `radio` and
 | `email` | `email` |
 | `phone` | `phone` |
 | `statement` | `statement` |
+| `meeting` | `meeting` |
 | `select` / `multiSelect` / `radio` / `checkbox` | `choice` |
 | `address` | `address` |
 | `rating` | `rating` |
 | `opinionScale` | `opinionScale` |
+| `nps` | `nps` |
 | `file` | `upload` |
 | `matrix` | `matrix` |
+| `payment` | `payment` |
 
 ### email
 ```json
@@ -91,6 +95,27 @@ The group name is **not** the type name — `select`, `multiSelect`, `radio` and
 `embedProvider`: `youtube` | `loom` | `vimeo` | `pdf` | `image` | `other`. `embedUrl` must be a valid URL or `""`.
 
 Statement is display-only. Use the existing **`label`** for the heading and **`helperText`** for the description body (there is no separate `description` property). **`required` is always forced to `false`**, whatever you send.
+
+### meeting
+```json
+{
+  "settings": {
+    "meeting": {
+      "provider": "calcom",
+      "link": "https://cal.com/jane/intro",
+      "openerText": "Select the slot.",
+      "prefillMappings": [
+        { "id": "map_1", "sourceKey": "block_a1b2c3", "targetKey": "name" }
+      ]
+    }
+  }
+}
+```
+`provider`: `calendly` | `calcom` | `calid` | `savvycal` | `tidycal`. `link` must be a valid URL or `""`.
+
+`prefillMappings` pass answers from earlier questions into the booking page's query params: `sourceKey` is the earlier question's `questionKey`/`blockKey`, `targetKey` is the provider's param name (usually `name`, `email` or `phone`).
+
+Meeting is display-only for validation (it renders a button that opens the provider in a scheduling dialog), so **`required` is always forced to `false`**. When the provider reports a completed booking, the selected slot is stored as this question's answer.
 
 ### choice — `select`, `multiSelect`, `radio`, `checkbox`
 ```json
@@ -144,6 +169,12 @@ These six are seeded automatically when the page is created. The admin can renam
 ```
 `min` must be `<` `max`, both within 0–100. The labels render under the left/right ends of the number row.
 
+### nps
+```json
+{ "settings": { "nps": { "leftLabel": "", "rightLabel": "", "singleRowOnMobile": false } } }
+```
+Fixed 0–10 recommendation score. Labels render under the left/right ends. On mobile the buttons use two rows by default; `singleRowOnMobile` shrinks them to fit one row.
+
 ### upload — type `file`
 ```json
 {
@@ -177,6 +208,79 @@ These six are seeded automatically when the page is created. The admin can renam
 }
 ```
 Max 50 rows, 20 columns. `key` and `order` are required on each entry; generate `key` client-side and keep it stable.
+
+### payment
+
+A fixed-price page that charges through **hosted Stripe Checkout**. The owner
+connects a Stripe account (per workspace, or per form creator when the form has
+no workspace), then every respondent pays the stored price.
+
+```json
+{
+  "settings": {
+    "payment": {
+      "stripeAccountId": "acct_123",
+      "currency": "usd",
+      "amount": 2500,
+      "allowInstallments": false,
+      "receiptEmailKey": "block_email1"
+    }
+  }
+}
+```
+
+| Field | Notes |
+|---|---|
+| `stripeAccountId` | Connected Stripe account that receives the charge. Empty = page not configured. |
+| `currency` | Lowercase ISO code. One of `usd, eur, gbp, cad, aud, chf, nok, sek, dkk, mxn, brl, aed, nzd, pln`. |
+| `amount` | **Minor units** (cents). `2500` = $25.00. Max 99,999,999. |
+| `allowInstallments` | Offers Klarna/Afterpay where Stripe supports them. |
+| `receiptEmailKey` | `questionKey` of an **earlier email question** that receives the receipt. Empty = no receipt. |
+
+Builder endpoints (owner only):
+
+- `GET /forms/:formId/payments/stripe/accounts` → `[{ accountId, name, connectedAt }]`
+- `GET /forms/:formId/payments/stripe/connect-url` → `{ url }` — open in the same tab; Stripe redirects back to `/form-builder/:formId?stripe=connected`.
+
+Respondent endpoints:
+
+- `POST /public/forms/:slug/payment-session` `{ pageKey, email?, respondentSessionId? }` → `{ id, url }` — redirect to `url`.
+- `GET /public/forms/:slug/payment-session/:sessionId?pageKey=…` → verified payment `{ sessionId, status: "paid", amount, currency, pageKey }`.
+
+Store the verified object as the page's answer:
+
+```json
+{ "sessionId": "cs_123", "status": "paid", "amount": 2500, "currency": "usd" }
+```
+
+On submit the backend re-checks every visible payment page with Stripe (paid,
+matching form/page/amount/currency) and rewrites the answer from Stripe — a
+client-reported `status: "paid"` is never trusted. Hidden payment pages (via
+logic) are skipped.
+
+**Payment must be its own page.** A page mixing a payment block with other
+questions is not supported: the builder hides "Add question" on a payment page
+and only offers Payment from "Add page".
+
+**Publishing is gated.** `PATCH /forms/:formId/publish` returns `400` until
+every live payment page has a connected account, an amount of at least
+`0.50` (minor units `50`), and a single active block. Saving a page whose `stripeAccountId` is not
+connected to the form's workspace (or its creator, for workspace-less forms)
+also returns `400`, so a form can only ever charge its owner's account.
+
+**Share links use the slug** (`/form/:slug`), not the form id.
+
+**Stripe configuration** (backend `.env`):
+
+```
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_CLIENT_ID=ca_...
+STRIPE_REDIRECT_URI=http://localhost:5000/api/v1/public/stripe/callback
+STRIPE_API_BASE_URL=https://api.stripe.com
+STRIPE_CONNECT_BASE_URL=https://connect.stripe.com
+```
+
+Without these the payment endpoints return `503`.
 
 ---
 

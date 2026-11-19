@@ -5,14 +5,17 @@ import {
   contactInfoPageKeys,
   countryCodeModes,
   embedProviders,
+  meetingProviders,
   pageTypes,
   logicActions,
   logicOperators,
   MAX_MATRIX_COLUMNS,
   MAX_MATRIX_ROWS,
+  MAX_PAYMENT_AMOUNT,
   MAX_RATING_VALUE,
   MAX_UPLOAD_SIZE_MB,
   optionsPerRowValues,
+  paymentCurrencies,
   ratingStyles,
   SCALE_LOWER_BOUND,
   SCALE_UPPER_BOUND,
@@ -36,6 +39,26 @@ const coverImageSchema = z.object({
 
 /** Blank (null) means "no limit" for the character/number bounds. */
 const optionalLimit = z.number().int().nonnegative().nullish();
+
+/** Accepts `https://…`, bare hosts like `cal.com/jane`, or an empty string. */
+const meetingLinkSchema = z
+  .string()
+  .max(2000)
+  .refine(
+    (value) => {
+      if (value === "") return true;
+      try {
+        const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(value)
+          ? value
+          : `https://${value}`;
+        const url = new URL(candidate);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    },
+    { message: "link must be a valid URL" }
+  );
 
 const validationSchema = z
   .object({
@@ -160,6 +183,24 @@ const settingsSchema = z
       })
       .optional(),
 
+    meeting: z
+      .object({
+        provider: z.enum(meetingProviders).optional(),
+        link: meetingLinkSchema.optional(),
+        openerText: z.string().max(200).optional(),
+        prefillMappings: z
+          .array(
+            z.object({
+              id: z.string().max(100).optional(),
+              sourceKey: z.string().min(1).max(200),
+              targetKey: z.string().max(100).optional(),
+            })
+          )
+          .max(50)
+          .optional(),
+      })
+      .optional(),
+
     choice: z
       .object({
         allowOther: z.boolean().optional(),
@@ -205,6 +246,14 @@ const settingsSchema = z
       })
       .optional(),
 
+    nps: z
+      .object({
+        leftLabel: z.string().max(200).optional(),
+        rightLabel: z.string().max(200).optional(),
+        singleRowOnMobile: z.boolean().optional(),
+      })
+      .optional(),
+
     slider: z
       .object({
         min: z.number().nullish(),
@@ -238,6 +287,16 @@ const settingsSchema = z
         rows: z.array(matrixEntrySchema).max(MAX_MATRIX_ROWS).optional(),
         columns: z.array(matrixEntrySchema).max(MAX_MATRIX_COLUMNS).optional(),
         allowMultiplePerRow: z.boolean().optional(),
+      })
+      .optional(),
+
+    payment: z
+      .object({
+        stripeAccountId: z.string().max(100).optional(),
+        currency: z.enum(paymentCurrencies).optional(),
+        amount: z.number().int().min(0).max(MAX_PAYMENT_AMOUNT).optional(),
+        allowInstallments: z.boolean().optional(),
+        receiptEmailKey: z.string().max(200).optional(),
       })
       .optional(),
   })

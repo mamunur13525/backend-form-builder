@@ -24,15 +24,18 @@ export const pageTypes = [
   "address",
   "contactInfo",
   "opinionScale",
+  "nps",
   "slider",
   "signature",
   "matrix",
+  "meeting",
+  "payment",
 ] as const;
 
 export type PageType = (typeof pageTypes)[number];
 
 /** Page types that never collect an answer from the respondent. */
-export const displayOnlyPageTypes: PageType[] = ["statement"];
+export const displayOnlyPageTypes: PageType[] = ["statement", "meeting"];
 
 export const logicOperators = [
   "equals",
@@ -111,6 +114,23 @@ export const embedProviders = [
 ] as const;
 
 export type EmbedProvider = (typeof embedProviders)[number];
+
+/* -------------------------------------------------------------------------- */
+/* Meeting / scheduling                                                       */
+/* -------------------------------------------------------------------------- */
+
+export const meetingProviders = [
+  "calendly",
+  "calcom",
+  "calid",
+  "savvycal",
+  "tidycal",
+] as const;
+
+export type MeetingProvider = (typeof meetingProviders)[number];
+
+export const DEFAULT_MEETING_PROVIDER: MeetingProvider = "calcom";
+export const DEFAULT_MEETING_OPENER_TEXT = "Select the slot.";
 
 /* -------------------------------------------------------------------------- */
 /* Phone                                                                       */
@@ -283,3 +303,30 @@ export const MAX_UPLOAD_SIZE_MB = 100;
 
 export const MAX_MATRIX_ROWS = 50;
 export const MAX_MATRIX_COLUMNS = 20;
+
+/* -------------------------------------------------------------------------- */
+/* Payment                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Currencies offered by the payment block. All use two minor-unit decimals. */
+export const paymentCurrencies = [
+  "usd",
+  "eur",
+  "gbp",
+  "cad",
+  "aud",
+  "chf",
+  "nok",
+  "sek",
+  "dkk",
+  "mxn",
+  "brl",
+  "aed",
+  "nzd",
+  "pln",
+] as const;
+
+export const DEFAULT_PAYMENT_CURRENCY = "usd";
+/** Stripe's practical minimum for card payments in two-decimal currencies. */
+export const MIN_PAYMENT_AMOUNT = 50;
+export const MAX_PAYMENT_AMOUNT = 99999999;

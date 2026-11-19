@@ -28,6 +28,16 @@ export const env = {
   lemonsqueezyWebhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "",
   lemonsqueezyApiBaseUrl:
     process.env.LEMONSQUEEZY_API_BASE_URL || "https://api.lemonsqueezy.com/v1",
+  // Stripe Connect — collect payments on the form owner's connected account.
+  // Connect OAuth also needs the platform client id; the secret key creates and
+  // verifies Checkout Sessions.
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+  stripeClientId: process.env.STRIPE_CLIENT_ID || "",
+  stripeRedirectUri:
+    process.env.STRIPE_REDIRECT_URI ||
+    "http://localhost:5000/api/v1/public/stripe/callback",
+  stripeApiBaseUrl: process.env.STRIPE_API_BASE_URL || "https://api.stripe.com",
+  stripeConnectBaseUrl: process.env.STRIPE_CONNECT_BASE_URL || "https://connect.stripe.com",
   // ImageKit — server-side upload via the REST API. Only the private key is
   // strictly required for uploading; the public key / URL endpoint are kept for
   // completeness (client SDK, signed URLs, transformations).

@@ -3,8 +3,11 @@ import {
   defaultAddressPages,
   defaultContactInfoPages,
   DEFAULT_MAX_UPLOAD_SIZE_MB,
+  DEFAULT_MEETING_PROVIDER,
+  DEFAULT_MEETING_OPENER_TEXT,
   DEFAULT_OPTIONS_PER_ROW_DESKTOP,
   DEFAULT_OPTIONS_PER_ROW_MOBILE,
+  DEFAULT_PAYMENT_CURRENCY,
   DEFAULT_RATING_MAX,
   DEFAULT_RATING_STYLE,
   DEFAULT_SCALE_MAX,
@@ -20,6 +23,7 @@ const settingsGroupByType: Partial<Record<PageType, keyof IPageSettings>> = {
   email: "email",
   phone: "phone",
   statement: "statement",
+  meeting: "meeting",
   select: "choice",
   multiSelect: "choice",
   radio: "choice",
@@ -28,9 +32,11 @@ const settingsGroupByType: Partial<Record<PageType, keyof IPageSettings>> = {
   contactInfo: "contactInfo",
   rating: "rating",
   opinionScale: "opinionScale",
+  nps: "nps",
   slider: "slider",
   file: "upload",
   matrix: "matrix",
+  payment: "payment",
 };
 
 export const getSettingsGroup = (type: string): keyof IPageSettings | undefined =>
@@ -52,6 +58,16 @@ const buildDefaults = (group: keyof IPageSettings, type: string): IPageSettings 
 
     case "statement":
       return { statement: { embedUrl: "", embedProvider: undefined, embedTitle: "" } };
+
+    case "meeting":
+      return {
+        meeting: {
+          provider: DEFAULT_MEETING_PROVIDER,
+          link: "",
+          openerText: DEFAULT_MEETING_OPENER_TEXT,
+          prefillMappings: [],
+        },
+      };
 
     case "choice":
       return {
@@ -90,6 +106,15 @@ const buildDefaults = (group: keyof IPageSettings, type: string): IPageSettings 
         },
       };
 
+    case "nps":
+      return {
+        nps: {
+          leftLabel: "",
+          rightLabel: "",
+          singleRowOnMobile: false,
+        },
+      };
+
     case "slider":
       return {
         slider: {
@@ -116,6 +141,17 @@ const buildDefaults = (group: keyof IPageSettings, type: string): IPageSettings 
 
     case "matrix":
       return { matrix: { rows: [], columns: [], allowMultiplePerRow: false } };
+
+    case "payment":
+      return {
+        payment: {
+          stripeAccountId: "",
+          currency: DEFAULT_PAYMENT_CURRENCY,
+          amount: 0,
+          allowInstallments: false,
+          receiptEmailKey: "",
+        },
+      };
 
     default:
       return {};

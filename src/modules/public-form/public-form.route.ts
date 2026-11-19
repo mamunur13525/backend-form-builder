@@ -7,6 +7,8 @@ import {
   saveDraftSchema,
   slugParamSchema,
   submissionIdParamSchema,
+  paymentSessionSchema,
+  verifyPaymentSessionSchema,
 } from "./public-form.validation";
 
 const router: ExpressRouter = Router();
@@ -19,5 +21,20 @@ router.post("/forms/:slug/submit", publicFormRateLimiter, validate(submitFormSch
 router.post("/forms/:slug/save-draft", validate(saveDraftSchema), publicFormController.saveDraft);
 router.post("/forms/:slug/track-view", publicFormController.trackView);
 router.get("/forms/:slug/submit-status/:submissionId", validate(submissionIdParamSchema), publicFormController.getSubmitStatus);
+
+// Payments: respondents pay via Stripe Checkout; the callback connects an
+// owner's Stripe account.
+router.post(
+  "/forms/:slug/payment-session",
+  publicFormRateLimiter,
+  validate(paymentSessionSchema),
+  publicFormController.createPaymentSession
+);
+router.get(
+  "/forms/:slug/payment-session/:sessionId",
+  validate(verifyPaymentSessionSchema),
+  publicFormController.verifyPaymentSession
+);
+router.get("/stripe/callback", publicFormController.stripeConnectCallback);
 
 export default router;

@@ -20,10 +20,15 @@ import {
   DEFAULT_SLIDER_STEP,
   sliderSeparatorValues,
   embedProviders,
+  meetingProviders,
+  DEFAULT_MEETING_PROVIDER,
+  DEFAULT_MEETING_OPENER_TEXT,
+  DEFAULT_PAYMENT_CURRENCY,
   pageTypes,
   PageType,
   logicActions,
   logicOperators,
+  paymentCurrencies,
   ratingStyles,
   selectionLimitModes,
 } from "../constants/pageTypes";
@@ -288,6 +293,24 @@ export interface IStatementPageSettings {
   embedTitle?: string;
 }
 
+export interface IMeetingPrefillMapping {
+  id?: string;
+  /** `questionKey`/`blockKey` of the earlier question. */
+  sourceKey: string;
+  /** Query param understood by the booking provider (e.g. `name`). */
+  targetKey: string;
+}
+
+export interface IMeetingPageSettings {
+  /** Which scheduling provider the link points at. */
+  provider: (typeof meetingProviders)[number];
+  /** Full booking-page URL. */
+  link: string;
+  /** Label on the button that opens the scheduling dialog. */
+  openerText: string;
+  prefillMappings: IMeetingPrefillMapping[];
+}
+
 export interface IChoicePageSettings {
   /** Adds an extra "Other" choice with a free-text input. */
   allowOther: boolean;
@@ -349,6 +372,13 @@ export interface IOpinionScalePageSettings {
   rightLabel: string;
 }
 
+export interface INpsPageSettings {
+  leftLabel: string;
+  rightLabel: string;
+  /** Shrink the 0–10 buttons so they fit in one row on mobile. */
+  singleRowOnMobile: boolean;
+}
+
 export interface ISliderPageSettings {
   min?: number;
   max?: number;
@@ -381,18 +411,33 @@ export interface IMatrixPageSettings {
   allowMultiplePerRow: boolean;
 }
 
+export interface IPaymentPageSettings {
+  /** Connected Stripe account that receives the charge. */
+  stripeAccountId: string;
+  currency: (typeof paymentCurrencies)[number];
+  /** Fixed price in the currency's minor unit (cents). */
+  amount: number;
+  /** Offer Klarna/Afterpay alongside cards when the account supports them. */
+  allowInstallments: boolean;
+  /** Earlier email question whose answer receives the receipt. Empty = no receipt. */
+  receiptEmailKey: string;
+}
+
 export interface IPageSettings {
   email?: IEmailPageSettings;
   phone?: IPhonePageSettings;
   statement?: IStatementPageSettings;
+  meeting?: IMeetingPageSettings;
   choice?: IChoicePageSettings;
   address?: IAddressPageSettings;
   contactInfo?: IContactInfoPageSettings;
   rating?: IRatingPageSettings;
   opinionScale?: IOpinionScalePageSettings;
+  nps?: INpsPageSettings;
   slider?: ISliderPageSettings;
   upload?: IUploadPageSettings;
   matrix?: IMatrixPageSettings;
+  payment?: IPaymentPageSettings;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -948,6 +993,29 @@ const statementSettingsSchema = new Schema<IStatementPageSettings>(
   subDoc
 );
 
+const meetingPrefillMappingSchema = new Schema<IMeetingPrefillMapping>(
+  {
+    id: { type: String },
+    sourceKey: { type: String, required: true },
+    targetKey: { type: String, default: "" },
+  },
+  subDoc
+);
+
+const meetingSettingsSchema = new Schema<IMeetingPageSettings>(
+  {
+    provider: {
+      type: String,
+      enum: meetingProviders,
+      default: DEFAULT_MEETING_PROVIDER,
+    },
+    link: { type: String, default: "" },
+    openerText: { type: String, default: DEFAULT_MEETING_OPENER_TEXT },
+    prefillMappings: { type: [meetingPrefillMappingSchema], default: [] },
+  },
+  subDoc
+);
+
 const choiceSettingsSchema = new Schema<IChoicePageSettings>(
   {
     allowOther: { type: Boolean, default: false },
@@ -1025,6 +1093,15 @@ const opinionScaleSettingsSchema = new Schema<IOpinionScalePageSettings>(
   subDoc
 );
 
+const npsSettingsSchema = new Schema<INpsPageSettings>(
+  {
+    leftLabel: { type: String, default: "" },
+    rightLabel: { type: String, default: "" },
+    singleRowOnMobile: { type: Boolean, default: false },
+  },
+  subDoc
+);
+
 const sliderSettingsSchema = new Schema<ISliderPageSettings>(
   {
     min: { type: Number, default: DEFAULT_SLIDER_MIN },
@@ -1075,6 +1152,17 @@ const matrixSettingsSchema = new Schema<IMatrixPageSettings>(
   subDoc
 );
 
+const paymentSettingsSchema = new Schema<IPaymentPageSettings>(
+  {
+    stripeAccountId: { type: String, default: "" },
+    currency: { type: String, enum: paymentCurrencies, default: DEFAULT_PAYMENT_CURRENCY },
+    amount: { type: Number, default: 0 },
+    allowInstallments: { type: Boolean, default: false },
+    receiptEmailKey: { type: String, default: "" },
+  },
+  subDoc
+);
+
 /**
  * Only the group relevant to the page's type is populated; the rest stay
  * `undefined` so documents don't carry unrelated settings.
@@ -1084,14 +1172,17 @@ const pageSettingsSchema = new Schema<IPageSettings>(
     email: { type: emailSettingsSchema, default: undefined },
     phone: { type: phoneSettingsSchema, default: undefined },
     statement: { type: statementSettingsSchema, default: undefined },
+    meeting: { type: meetingSettingsSchema, default: undefined },
     choice: { type: choiceSettingsSchema, default: undefined },
     address: { type: addressSettingsSchema, default: undefined },
     contactInfo: { type: contactInfoSettingsSchema, default: undefined },
     rating: { type: ratingSettingsSchema, default: undefined },
     opinionScale: { type: opinionScaleSettingsSchema, default: undefined },
+    nps: { type: npsSettingsSchema, default: undefined },
     slider: { type: sliderSettingsSchema, default: undefined },
     upload: { type: uploadSettingsSchema, default: undefined },
     matrix: { type: matrixSettingsSchema, default: undefined },
+    payment: { type: paymentSettingsSchema, default: undefined },
   },
   subDoc
 );

@@ -18,6 +18,14 @@ export interface IWorkspaceSettings {
   requireInviteApproval: boolean;
 }
 
+export interface IWorkspaceStripeAccount {
+  /** Stripe connected account id (`acct_…`). */
+  accountId: string;
+  name?: string;
+  connectedAt: Date;
+  connectedBy?: mongoose.Types.ObjectId;
+}
+
 export interface IWorkspace extends Document {
   name: string;
   slug: string;
@@ -26,6 +34,7 @@ export interface IWorkspace extends Document {
   createdBy: mongoose.Types.ObjectId;
   members: IWorkspaceMember[];
   settings: IWorkspaceSettings;
+  stripeAccounts: IWorkspaceStripeAccount[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +59,16 @@ const workspaceSettingsSchema = new Schema<IWorkspaceSettings>(
   { _id: false }
 );
 
+const stripeAccountSchema = new Schema<IWorkspaceStripeAccount>(
+  {
+    accountId: { type: String, required: true },
+    name: { type: String, default: "" },
+    connectedAt: { type: Date, default: Date.now },
+    connectedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  },
+  { _id: false }
+);
+
 const workspaceSchema = new Schema<IWorkspace>(
   {
     name: { type: String, required: true, trim: true },
@@ -67,6 +86,7 @@ const workspaceSchema = new Schema<IWorkspace>(
         requireInviteApproval: false,
       }),
     },
+    stripeAccounts: { type: [stripeAccountSchema], default: [] },
   },
   { timestamps: true }
 );

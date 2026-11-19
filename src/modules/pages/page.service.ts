@@ -4,6 +4,7 @@ import { httpStatus } from "../../constants/httpStatus";
 import { nanoid } from "nanoid";
 import * as pageRepo from "./page.repository";
 import { buildPageSettings } from "./page.settings";
+import { assertPaymentAccountSaved } from "../payments/payment-account";
 import { displayOnlyPageTypes, PageType } from "../../constants/pageTypes";
 import {
   CreatePageBody,
@@ -62,6 +63,10 @@ export const createPage = async (
     }
   }
 
+  const settings = buildPageSettings(pageType, data.settings);
+  // Only a Stripe account connected to this form's owner may be charged.
+  await assertPaymentAccountSaved(formId, settings);
+
   const result = await pageRepo.createPage({
     formId,
     pageKey,
@@ -76,7 +81,7 @@ export const createPage = async (
     coverImage: data.coverImage || undefined,
     options: data.options || [],
     validation: data.validation || {},
-    settings: buildPageSettings(pageType, data.settings),
+    settings,
     appearance: data.appearance || { width: "full", icon: "", submitButtonText: "", submitButtonColor: "" },
     blocks,
   });
@@ -123,6 +128,12 @@ export const updatePage = async (
   // page never keeps settings belonging to its previous type.
   if (data.settings !== undefined || (data.type && data.type !== page.type)) {
     payload.settings = buildPageSettings(nextType, data.settings ?? page.settings);
+  }
+
+  // Saving a newly chosen Stripe account requires it to be connected to this
+  // form's owner; unrelated edits stay possible if an account is later revoked.
+  if (data.settings?.payment?.stripeAccountId) {
+    await assertPaymentAccountSaved(formId, payload.settings);
   }
 
   if (data.required !== undefined || data.type) {

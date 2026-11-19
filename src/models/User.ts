@@ -1,5 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IUserStripeAccount {
+  accountId: string;
+  name: string;
+  connectedAt: Date;
+}
+
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -10,6 +16,8 @@ export interface IUser extends Document {
   role: "admin" | "editor" | "viewer";
   isActive: boolean;
   activeWorkspaceId?: mongoose.Types.ObjectId;
+  /** Stripe Connect accounts for forms that don't belong to a workspace. */
+  stripeAccounts: IUserStripeAccount[];
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +49,19 @@ const userSchema = new Schema<IUser>(
     },
     isActive: { type: Boolean, default: true },
     activeWorkspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", default: null },
+    stripeAccounts: {
+      type: [
+        new Schema<IUserStripeAccount>(
+          {
+            accountId: { type: String, required: true },
+            name: { type: String, default: "" },
+            connectedAt: { type: Date, default: Date.now },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
     lastLoginAt: { type: Date },
   },
   { timestamps: true }
