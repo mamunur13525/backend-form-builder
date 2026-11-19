@@ -239,12 +239,16 @@ no workspace), then every respondent pays the stored price.
 
 Builder endpoints (owner only):
 
-- `GET /forms/:formId/payments/stripe/accounts` → `[{ accountId, name, connectedAt }]`
+- `GET /forms/:formId/payments/stripe/accounts` → `[{ accountId, name, connectedAt, status, chargesEnabled, payoutsEnabled, detailsSubmitted, requirementsDue }]`
+- `POST /forms/:formId/payments/stripe/accounts/refresh` → re-reads capabilities from Stripe and returns the same shape.
+- `DELETE /forms/:formId/payments/stripe/accounts/:accountId` → revokes the platform's Stripe access. Historical payments are kept.
+- `POST /forms/:formId/payments/stripe/accounts/:accountId/onboarding-link` → `{ url }` — fresh Stripe onboarding link that collects missing requirements. Use when the account status is `incomplete`/`restricted`; it does not make the account payment-ready by itself.
+- `POST /forms/:formId/payments/stripe/accounts/:accountId/dashboard-link` → `{ url }` — short-lived link into the owner's own Stripe dashboard.
 - `GET /forms/:formId/payments/stripe/connect-url` → `{ url }` — open in the same tab; Stripe redirects back to `/form-builder/:formId?stripe=connected`.
 
 Respondent endpoints:
 
-- `POST /public/forms/:slug/payment-session` `{ pageKey, email?, respondentSessionId? }` → `{ id, url }` — redirect to `url`.
+- `POST /public/forms/:slug/payment-session` `{ pageKey, email?, respondentSessionId? }` → `{ id, url, paymentId }` — redirect to `url`. Retrying with the same `respondentSessionId` reuses the open session instead of charging twice.
 - `GET /public/forms/:slug/payment-session/:sessionId?pageKey=…` → verified payment `{ sessionId, status: "paid", amount, currency, pageKey }`.
 
 Store the verified object as the page's answer:
@@ -258,15 +262,44 @@ matching form/page/amount/currency) and rewrites the answer from Stripe — a
 client-reported `status: "paid"` is never trusted. Hidden payment pages (via
 logic) are skipped.
 
-**Payment must be its own page.** A page mixing a payment block with other
+**Every attempt is recorded.** `POST /public/forms/:slug/payment-session`
+writes a `FormPayment` row (amount, currency, connected account, checkout
+session, status, customer email). The verified submission is linked to it, so
+the owner can reconcile responses with money.
+
+**Payment is its own page.** A page mixing a payment block with other
 questions is not supported: the builder hides "Add question" on a payment page
 and only offers Payment from "Add page".
 
 **Publishing is gated.** `PATCH /forms/:formId/publish` returns `400` until
-every live payment page has a connected account, an amount of at least
+every live payment page has a connected account whose Stripe onboarding is complete and
+chargeable (`charges_enabled` must be `true`), an amount of at least
 `0.50` (minor units `50`), and a single active block. Saving a page whose `stripeAccountId` is not
 connected to the form's workspace (or its creator, for workspace-less forms)
 also returns `400`, so a form can only ever charge its owner's account.
+
+**Webhooks are authoritative.** `POST /public/stripe/webhook` verifies the
+`Stripe-Signature` HMAC over the raw body and is idempotent per Stripe event id.
+It updates payment status for:
+
+- `checkout.session.completed` / `checkout.session.async_payment_succeeded`
+- `checkout.session.async_payment_failed` / `checkout.session.expired`
+- `payment_intent.payment_failed`
+- `charge.refunded`, `charge.dispute.created` / `updated` / `closed`
+- `account.updated` (refreshes `chargesEnabled`, `payoutsEnabled`, requirements)
+
+The success-page verification is only a fast path; Stripe's webhook is the
+source of truth.
+
+**Owner payment history** (signed-in user; own forms + workspace forms):
+
+- `GET /api/v1/payments?status=&currency=&formId=&from=&to=&page=&limit=` → `{ items, total, page, limit }`
+- `GET /api/v1/payments/overview` → per-currency `{ paidCount, grossAmount, refundedAmount, pendingCount }`
+- `GET /api/v1/payments/:paymentId`
+- `POST /api/v1/payments/:paymentId/refund` `{ amountMinor? }` — omitting the amount refunds the remaining balance. Runs in the connected account's context (direct charges).
+
+The **Payments** page in the sidebar shows the totals, the transaction ledger,
+and the refund action.
 
 **Share links use the slug** (`/form/:slug`), not the form id.
 
@@ -276,11 +309,15 @@ also returns `400`, so a form can only ever charge its owner's account.
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_CLIENT_ID=ca_...
 STRIPE_REDIRECT_URI=http://localhost:5000/api/v1/public/stripe/callback
+STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_API_BASE_URL=https://api.stripe.com
 STRIPE_CONNECT_BASE_URL=https://connect.stripe.com
+# Optional platform fee on direct charges, basis points (100 = 1%)
+STRIPE_PLATFORM_FEE_BPS=0
 ```
 
-Without these the payment endpoints return `503`.
+Without these the payment endpoints return `503`; webhooks without
+`STRIPE_WEBHOOK_SECRET` also return `503`.
 
 ---
 

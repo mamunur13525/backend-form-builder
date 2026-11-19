@@ -74,7 +74,7 @@ const stripeRequest = async <T>(
     );
     throw new ApiError(
       httpStatus.BAD_GATEWAY,
-      data?.error?.message || "Stripe rejected the request. Please try again later."
+      "Stripe could not process this request. Please try again later."
     );
   }
   return data as T;
@@ -135,13 +135,101 @@ export interface CheckoutSession {
 
 export interface CheckoutSessionResult {
   id: string;
+  url?: string | null;
   status: string | null;
   payment_status: string;
   amount_total: number | null;
   currency: string | null;
+  payment_intent?: string | null;
   metadata?: Record<string, string> | null;
   customer_details?: { email?: string | null } | null;
 }
+
+export interface StripeAccountResult {
+  id: string;
+  country?: string;
+  email?: string;
+  charges_enabled?: boolean;
+  payouts_enabled?: boolean;
+  details_submitted?: boolean;
+  requirements?: { currently_due?: string[]; disabled_reason?: string | null };
+}
+
+export interface StripeRefundResult {
+  id: string;
+  amount: number;
+  currency?: string;
+  status: string;
+  payment_intent?: string | null;
+}
+
+/** Fetch the connected account so we only enable payments Stripe will accept. */
+export const retrieveAccount = (accountId: string): Promise<StripeAccountResult> =>
+  stripeRequest<StripeAccountResult>(
+    `${env.stripeApiBaseUrl}/v1/accounts/${encodeURIComponent(accountId)}`,
+    { method: "GET" }
+  );
+
+/**
+ * Hosted onboarding link for an account that still owes Stripe information.
+ * Unlike OAuth, this is the flow that collects the missing requirements.
+ */
+export const createAccountOnboardingLink = (
+  accountId: string,
+  urls: { refreshUrl: string; returnUrl: string }
+): Promise<{ url: string }> =>
+  stripeRequest<{ url: string }>(
+    `${env.stripeApiBaseUrl}/v1/account_links`,
+    {
+      method: "POST",
+      body: toFormBody({
+        account: accountId,
+        type: "account_onboarding",
+        refresh_url: urls.refreshUrl,
+        return_url: urls.returnUrl,
+      }),
+    }
+  );
+
+/** Short-lived link into the connected account's own Stripe dashboard. */
+export const createDashboardLink = (accountId: string): Promise<{ url: string }> =>
+  stripeRequest<{ url: string }>(
+    `${env.stripeApiBaseUrl}/v1/accounts/${encodeURIComponent(accountId)}/login_links`,
+    { method: "POST" }
+  );
+
+/** Create a refund inside the connected account (direct charge context). */
+export const createRefund = (
+  accountId: string,
+  params: { paymentIntentId: string; amountMinor?: number; reason?: string }
+): Promise<StripeRefundResult> =>
+  stripeRequest<StripeRefundResult>(
+    `${env.stripeApiBaseUrl}/v1/refunds`,
+    {
+      method: "POST",
+      body: toFormBody({
+        payment_intent: params.paymentIntentId,
+        amount: params.amountMinor,
+        reason: params.reason,
+      }),
+    },
+    accountId
+  );
+
+/** Revoke the platform's access; the owner's Stripe account itself is untouched. */
+export const deauthorizeAccount = async (accountId: string): Promise<void> => {
+  await stripeRequest<Record<string, unknown>>(
+    `${env.stripeConnectBaseUrl}/oauth/deauthorize`,
+    {
+      method: "POST",
+      body: toFormBody({
+        client_id: env.stripeClientId,
+        stripe_user_id: accountId,
+      }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    }
+  );
+};
 
 /** Create a hosted Checkout Session on the connected account. */
 export const createCheckoutSession = (
@@ -150,8 +238,12 @@ export const createCheckoutSession = (
     currency: string;
     amount: number;
     title: string;
+    formTitle?: string;
+    description?: string;
     allowInstallments: boolean;
     email?: string;
+    applicationFeeMinor?: number;
+    idempotencyKey?: string;
     metadata: Record<string, string>;
     successUrl: string;
     cancelUrl: string;
@@ -161,6 +253,9 @@ export const createCheckoutSession = (
     `${env.stripeApiBaseUrl}/v1/checkout/sessions`,
     {
       method: "POST",
+      ...(params.idempotencyKey
+        ? { headers: { "Idempotency-Key": params.idempotencyKey } }
+        : {}),
       body: toFormBody({
         mode: "payment",
         // Omitting payment_method_types enables the account's dynamic methods
@@ -172,12 +267,28 @@ export const createCheckoutSession = (
             price_data: {
               currency: params.currency,
               unit_amount: params.amount,
-              product_data: { name: params.title || "Payment" },
+              product_data: {
+                name: params.title || params.formTitle || "Payment",
+                ...(params.description
+                  ? { description: params.description }
+                  : params.formTitle && params.formTitle !== params.title
+                    ? { description: `From ${params.formTitle}` }
+                    : {}),
+              },
             },
           },
         ],
-        ...(params.email
-          ? { payment_intent_data: { receipt_email: params.email } }
+        ...(params.email || params.applicationFeeMinor
+          ? {
+              payment_intent_data: {
+                ...(params.email ? { receipt_email: params.email } : {}),
+                // Direct charges: the platform fee is taken in the connected
+                // account's context; the owner pays processing fees.
+                ...(params.applicationFeeMinor
+                  ? { application_fee_amount: params.applicationFeeMinor }
+                  : {}),
+              },
+            }
           : {}),
         metadata: params.metadata,
         success_url: params.successUrl,

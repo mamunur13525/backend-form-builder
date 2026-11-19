@@ -38,6 +38,13 @@ export const env = {
     "http://localhost:5000/api/v1/public/stripe/callback",
   stripeApiBaseUrl: process.env.STRIPE_API_BASE_URL || "https://api.stripe.com",
   stripeConnectBaseUrl: process.env.STRIPE_CONNECT_BASE_URL || "https://connect.stripe.com",
+  // Connect webhook signing secret (`whsec_…`) — authoritative payment status.
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+  // Optional platform application fee on direct charges, in basis points.
+  stripePlatformFeeBps: Math.max(
+    0,
+    Math.min(10000, parseInt(process.env.STRIPE_PLATFORM_FEE_BPS || "0", 10) || 0)
+  ),
   // ImageKit — server-side upload via the REST API. Only the private key is
   // strictly required for uploading; the public key / URL endpoint are kept for
   // completeness (client SDK, signed URLs, transformations).

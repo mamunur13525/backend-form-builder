@@ -263,7 +263,7 @@ export const submitForm = async (
   }
 
   // Payment answers are rebuilt from Stripe, never trusted from the client.
-  await paymentService.verifySubmissionPayments({
+  const paidSessionIds = await paymentService.verifySubmissionPayments({
     formId: String(form._id),
     version,
     answers: normalizedAnswers,
@@ -314,6 +314,12 @@ export const submitForm = async (
       { $set: { started: true, completed: true, completedAt: new Date() } }
     ).catch(() => {});
   }
+
+  // Attach the verified payment attempts to the saved response so the owner
+  // can reconcile every submission with the money it collected.
+  await paymentService
+    .linkSubmissionPayments(paidSessionIds, response._id)
+    .catch(() => undefined);
 
   // Dispatch third-party integrations (Slack, Discord, Telegram, Zapier, etc.)
   // Runs in background so it never slows down or blocks response to respondent

@@ -18,7 +18,7 @@ import workspaceRoutes from "../modules/workspaces/workspace.route";
 import feedbackRoutes from "../modules/feedback/feedback.route";
 import updateRoutes from "../modules/updates/update.route";
 import billingRoutes from "../modules/billing/billing.route";
-import paymentRoutes from "../modules/payments/payment.route";
+import paymentRoutes, { paymentHistoryRouter } from "../modules/payments/payment.route";
 
 import { getPublicForm } from "../modules/public-form/public-form.controller";
 
@@ -48,5 +48,6 @@ router.use(`${apiPrefix}/feedback`, feedbackRoutes);
 router.use(`${apiPrefix}/updates`, updateRoutes);
 router.use(`${apiPrefix}/billing`, billingRoutes);
 router.use(`${apiPrefix}/forms`, paymentRoutes);
+router.use(`${apiPrefix}/payments`, paymentHistoryRouter);
 
 export default router;

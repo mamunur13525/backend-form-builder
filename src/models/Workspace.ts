@@ -24,6 +24,14 @@ export interface IWorkspaceStripeAccount {
   name?: string;
   connectedAt: Date;
   connectedBy?: mongoose.Types.ObjectId;
+  /** Synced from Stripe (`GET /v1/accounts/:id` or `account.updated`). */
+  country?: string;
+  email?: string;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+  detailsSubmitted?: boolean;
+  requirementsDue?: string[];
+  statusSyncedAt?: Date;
 }
 
 export interface IWorkspace extends Document {
@@ -65,6 +73,13 @@ const stripeAccountSchema = new Schema<IWorkspaceStripeAccount>(
     name: { type: String, default: "" },
     connectedAt: { type: Date, default: Date.now },
     connectedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    country: { type: String, default: "" },
+    email: { type: String, default: "" },
+    chargesEnabled: { type: Boolean },
+    payoutsEnabled: { type: Boolean },
+    detailsSubmitted: { type: Boolean },
+    requirementsDue: { type: [String], default: [] },
+    statusSyncedAt: { type: Date },
   },
   { _id: false }
 );

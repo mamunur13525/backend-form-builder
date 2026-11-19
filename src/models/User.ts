@@ -4,6 +4,13 @@ export interface IUserStripeAccount {
   accountId: string;
   name: string;
   connectedAt: Date;
+  country?: string;
+  email?: string;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+  detailsSubmitted?: boolean;
+  requirementsDue?: string[];
+  statusSyncedAt?: Date;
 }
 
 export interface IUser extends Document {
@@ -56,6 +63,13 @@ const userSchema = new Schema<IUser>(
             accountId: { type: String, required: true },
             name: { type: String, default: "" },
             connectedAt: { type: Date, default: Date.now },
+            country: { type: String, default: "" },
+            email: { type: String, default: "" },
+            chargesEnabled: { type: Boolean },
+            payoutsEnabled: { type: Boolean },
+            detailsSubmitted: { type: Boolean },
+            requirementsDue: { type: [String], default: [] },
+            statusSyncedAt: { type: Date },
           },
           { _id: false }
         ),

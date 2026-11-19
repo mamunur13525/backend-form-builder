@@ -46,6 +46,12 @@ export type { IFormShare } from "./FormShare";
 export { FormVersion } from "./FormVersion";
 export type { IFormVersion, IFormVersionSchema } from "./FormVersion";
 
+export { FormPayment, PAYMENT_STATUSES } from "./FormPayment";
+export type { IFormPayment, PaymentStatus } from "./FormPayment";
+
+export { StripeWebhookEvent } from "./StripeWebhookEvent";
+export type { IStripeWebhookEvent } from "./StripeWebhookEvent";
+
 export { Feedback, FEEDBACK_STATUSES } from "./Feedback";
 export type { IFeedback, FeedbackStatus } from "./Feedback";
 

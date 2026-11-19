@@ -1,5 +1,6 @@
 import { Router, Router as ExpressRouter } from "express";
 import * as publicFormController from "./public-form.controller";
+import * as paymentController from "../payments/payment.controller";
 import { validate } from "../../middlewares/validate.middleware";
 import { publicFormRateLimiter } from "../../middlewares/rate-limit.middleware";
 import {
@@ -36,5 +37,7 @@ router.get(
   publicFormController.verifyPaymentSession
 );
 router.get("/stripe/callback", publicFormController.stripeConnectCallback);
+// Stripe Connect webhook: signature-verified, the authoritative payment state.
+router.post("/stripe/webhook", paymentController.handleStripeWebhook);
 
 export default router;

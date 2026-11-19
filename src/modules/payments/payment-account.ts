@@ -17,6 +17,13 @@ export interface ConnectedStripeAccount {
   accountId: string;
   name?: string;
   connectedAt?: Date | string;
+  country?: string;
+  email?: string;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+  detailsSubmitted?: boolean;
+  requirementsDue?: string[];
+  statusSyncedAt?: Date | string;
 }
 
 export interface AccountScope {
@@ -149,5 +156,19 @@ export const assertPaymentPagesReady = (
       );
     }
     assertAccountConnected(accounts, settings.stripeAccountId, title);
+
+    // Stripe can connect an account before onboarding is finished. Publishing
+    // must wait for that, otherwise the first respondent hits a checkout error.
+    const account = accounts.find(
+      (item) => item.accountId === settings.stripeAccountId
+    );
+    // Unknown is not the same as ready: a freshly-connected account must be
+    // refreshed (or synced by `account.updated`) before the form can go live.
+    if (account?.chargesEnabled !== true) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `The Stripe account for "${title}" cannot accept payments yet. Finish onboarding in Stripe, then refresh the account status.`
+      );
+    }
   }
 };

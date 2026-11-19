@@ -6,7 +6,8 @@ const isTest = () => env.nodeEnv === "test" || process.env.NODE_ENV === "test";
 export const generalRateLimiter = rateLimit({
   windowMs: env.rateLimitWindow * 60 * 1000,
   max: env.rateLimitMax,
-  skip: isTest,
+  // Stripe retries webhooks; rate-limiting them would drop payment state.
+  skip: (req) => isTest() || req.path === "/api/v1/public/stripe/webhook",
   message: {
     success: false,
     message: "Too many requests, please try again later",
